@@ -1,0 +1,184 @@
+Classe : MPSI-1, MPSI-2, 1-TSI-1, 1-TSI-2, MP-1, MP-2, 2-TSI-1, 2-TSI-2
+
+Motif Absence : Maladie, Concours français, Autre, Grève des élèves, Sanction
+
+Justifiée : Oui, Non
+
+
+
+    Column    |          Type           | Collation | Nullable | Default 
+--------------+-------------------------+-----------+----------+---------
+ lod          | boolean                 |           |          | 
+ date         | date                    |           |          | 
+ debut        | character varying(5)    |           |          | 
+ fin          | character varying(5)    |           |          | 
+ classe       | character varying(10)   |           |          | 
+ duree        | integer                 |           |          | 
+ motif        | character varying(50)   |           |          | 
+ justifiee    | boolean                 |           |          | 
+ observations | character varying(100)  |           |          | 
+ code         | character varying(20)   |           |          | 
+ nom          | character varying(50)   |           |          | 
+
+
+
+ Column  |         Type          | Collation | Nullable | Default 
+---------+-----------------------+-----------+----------+---------
+ nom     | character varying(50) |           |          | 
+ mdp     | character varying(10) |           |          | 
+ classes | character varying(10) |           |          | 
+
+
+
+ Column |         Type          | Collation | Nullable | Default 
+--------+-----------------------+-----------+----------+---------
+ code   | character varying(20) |           |          | 
+ nom    | character varying(50) |           |          | 
+ classe | character varying(10) |           |          | 
+
+
+
+
+install syncthing
+
+ sudo apt install nodejs
+// npm install // both in frontend and backend + ignore nodemodules
+
+PG ADMIN 
+ curl -fsS https://www.pgadmin.org/static/packages_pgadmin_org.pub | sudo gpg --dearmor -o /usr/share/keyrings/packages-pgadmin-org.gpg
+
+ sudo sh -c 'echo "deb [signed-by=/usr/share/keyrings/packages-pgadmin-org.gpg] https://ftp.postgresql.org/pub/pgadmin/pgadmin4/apt/$(lsb_release -cs) pgadmin4 main" > /etc/apt/sources.list.d/pgadmin4.list && apt update'
+
+sudo apt install pgadmin4
+
+** Create database with following credentials 
+ Name : postgres
+ hostname : localhost
+ port : 5432
+ username : postgres 
+ 
+//psql -U postgres -d mydb -h localhost
+ 
+
+ 
+///// steps for creating database
+ 
+sudo -u postgres psql
+CREATE USER my_user WITH PASSWORD 'my_password';
+CREATE DATABASE my_db_name OWNER my_user;
+\q
+psql -U my_user -d my_db_name -f /path/to/your/backup_file.sql
+
+///// setup local hostname for pc
+
+sudo apt install avahi-daemon avahi-utils libnss-mdns
+sudo hostnamectl set-hostname absence-app
+sudo apt update && sudo apt install avahi-daemon
+sudo systemctl enable avahi-daemon
+sudo systemctl start avahi-daemon
+
+**********
+sudo ufw allow 5000/tcp
+sudo ufw allow 5353/udp
+
+// setup ngnix
+
+
+// server.js
+const PORT = 5000;
+app.listen(PORT, "0.0.0.0", () => {
+    console.log(`Backend listening on all interfaces at port ${PORT}`);
+});
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+*sync (admindashboard update)
+*change password  // dataB$#^&
+*DROP TABLE absences
+*create table :
+CREATE TABLE absences (id SERIAL PRIMARY KEY, date DATE NOT NULL, debut TIME NOT NULL, fin TIME NOT NULL, classe VARCHAR(20) NOT NULL, code VARCHAR(20) NOT NULL, nom VARCHAR(100) NOT NULL, duree INTEGER CHECK (duree >= 0), motif INTEGER NOT NULL CHECK (motif IN (5,6,7,8,9)), justifiee BOOLEAN NOT NULL DEFAULT FALSE, UNIQUE (date, code, debut, fin));
+
+*
+CPGE#12?BM
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+-- Structure supposée :
+-- eleves(nom VARCHAR(...), classe VARCHAR(...), code VARCHAR(...))
+
+INSERT INTO eleves (nom, classe, code) VALUES
+('AGHRAS WAHIB', '2-TSI-1', 'L132368686'),
+('AIT MOHA SOUFIANE', '2-TSI-1', 'L137304684'),
+('AJARIF YASSINE', '2-TSI-1', 'L131278814'),
+('ANOIR AYA', '2-TSI-1', 'L137173456'),
+('ATIFY AYMANE', '2-TSI-1', 'L137073891'),
+('BEN ICHOU CHAIMAE', '2-TSI-1', 'L130014736'),
+('BOUCHAHMA HAMZA', '2-TSI-1', 'L146024586'),
+('BOUTAGOUS ABDENNOUR', '2-TSI-1', 'L137032610'),
+('CHEGRI AMINE', '2-TSI-1', 'L134138494'),
+('EL KHARFAOUI KAOUTAR', '2-TSI-1', 'L138079669'),
+('EL MECHBOUH AYMAN', '2-TSI-1', 'F134212916'),
+('FAROUK MOHAMED AMINE', '2-TSI-1', 'L130313598'),
+('FERCHANE ALI', '2-TSI-1', 'L130015444'),
+('GHAFFOUR MOHAMED', '2-TSI-1', 'L130326485'),
+('GHILANI SALAH-EDDINE', '2-TSI-1', 'M131106615'),
+('HADADI MOUNA', '2-TSI-1', 'L131341563'),
+('HADDAOUI HIBA', '2-TSI-1', 'L146020383'),
+('HAFDAOUI RAYAN', '2-TSI-1', 'L138046812'),
+('HAKKAOUI MOHAMED', '2-TSI-1', 'L135069080'),
+('HATIB AICHA', '2-TSI-1', 'L143020377'),
+('KEITA DIANGUINE', '2-TSI-1', 'MM00000535'),
+('KRIT AYA', '2-TSI-1', 'L138172075'),
+('LAAZZAOUI KHAWLA', '2-TSI-1', 'L136025032'),
+('LAGRICH MALAK', '2-TSI-1', 'L138168301'),
+('LAMRABI ABDELBASSET', '2-TSI-1', 'F149071110'),
+('LOUBANE HIBA', '2-TSI-1', 'L141037431'),
+('MAOUKIL MARYEM', '2-TSI-1', 'M145015037'),
+('NAIT CHRIF WALID', '2-TSI-1', 'L131096892'),
+('QASEM NAIMA', '2-TSI-1', 'L138088869'),
+('RABA SARA', '2-TSI-1', 'F136219782'),
+('SASSAOUI MOHAMED AMINE', '2-TSI-1', 'L130007725'),
+('SISSOKO BIRAMA', '2-TSI-1', 'MM00000536');
+
