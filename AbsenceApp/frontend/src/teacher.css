@@ -1,0 +1,86 @@
+.page-container {
+  display: flex;
+  justify-content: center;
+  padding: 20px;
+  min-height: 100vh;
+  background: #f5f6fa;
+  box-sizing: border-box;
+}
+
+.dashboard-card {
+  width: 100%;
+  max-width: 1000px;
+  padding: 25px 20px;
+  background: white;
+  border-radius: 20px;
+  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.12);
+  box-sizing: border-box;
+}
+
+.title {
+  margin: 0 0 25px;
+  font-size: 26px;
+  font-weight: 600;
+  color: #333;
+  text-align: center;
+}
+
+.table-wrapper {
+  overflow-x: auto;
+}
+
+.teacher-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 14px;
+}
+
+.teacher-table th,
+.teacher-table td {
+  border: 1px solid #ddd;
+  padding: 10px 8px;
+  text-align: left;
+}
+
+.teacher-table th {
+  background: #f0f2f5;
+  font-weight: 600;
+  color: #333;
+}
+
+.teacher-table td input,
+.teacher-table td select,
+.teacher-select {
+  width: 100%;
+  padding: 6px 8px;
+  border: 1px solid #ccc;
+  border-radius: 8px;
+  font-size: 14px;
+  box-sizing: border-box;
+}
+
+.teacher-table td input:focus,
+.teacher-table td select:focus,
+.teacher-select:focus {
+  outline: none;
+  border-color: #4a7dff;
+  box-shadow: 0 0 0 2px rgba(74, 125, 255, 0.2);
+}
+
+.save-btn {
+  margin-top: 15px;
+  padding: 12px 20px;
+  width: 150px;
+  background: #4a7dff;
+  color: white;
+  font-size: 16px;
+  font-weight: 600;
+  border: none;
+  border-radius: 12px;
+  cursor: pointer;
+  transition: all 0.3s;
+}
+
+.save-btn:hover {
+  background: #3a6bff;
+}

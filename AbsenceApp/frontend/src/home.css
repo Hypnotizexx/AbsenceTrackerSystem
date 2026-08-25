@@ -1,0 +1,130 @@
+/* Page */
+
+.home-page {
+  background: linear-gradient(135deg, #4f46e5 0%, #6d28d9 100%);
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+}
+
+.home-card {
+  max-width: 1000px;
+  width: 100%;
+  background: #ffffff;
+  padding: 50px;
+  border-radius: 22px;
+  box-shadow: 0 25px 70px rgba(0, 0, 0, 0.25);
+}
+
+/* Header */
+
+.home-header {
+  text-align: center;
+  margin-bottom: 3rem;
+}
+
+.title {
+  font-size: 2.4rem;
+  font-weight: 700;
+  color: #0f172a;
+  margin-bottom: 0.6rem;
+}
+
+.subtitle {
+  font-size: 1.15rem;
+  color: #475569;
+}
+
+/* Portals layout */
+
+.portals-container {
+  display: flex;
+  gap: 2.5rem;
+  flex-direction: row;
+}
+
+@media (max-width: 768px) {
+  .portals-container {
+    flex-direction: column;
+  }
+}
+
+/* Portal block */
+
+.portal-block {
+  flex: 1;
+  display: flex;
+  gap: 1.8rem;
+  padding: 2.4rem;
+  border-radius: 18px;
+  color: white;
+  align-items: center;
+}
+
+.portal-block.teacher {
+  background: linear-gradient(135deg, #2563eb, #1e40af);
+}
+
+/* Icon */
+
+.portal-icon-wrapper {
+  font-size: 3.4rem;
+  opacity: 0.95;
+  flex-shrink: 0;
+}
+
+/* Content */
+
+.portal-content h3 {
+  font-size: 1.45rem;
+  font-weight: 600;
+  margin-bottom: 0.5rem;
+}
+
+.portal-description {
+  font-size: 1.02rem;
+  line-height: 1.55;
+  opacity: 0.95;
+  margin-bottom: 1.4rem;
+}
+
+/* Button */
+
+.portal-action {
+  background: rgba(255, 255, 255, 0.15);
+  border: 1px solid rgba(255, 255, 255, 0.45);
+  color: white;
+  padding: 0.75rem 1.6rem;
+  border-radius: 10px;
+  cursor: pointer;
+  font-size: 0.95rem;
+  transition: all 0.3s ease;
+}
+
+.portal-action:hover {
+  background: rgba(255, 255, 255, 0.25);
+}
+
+/* 🔹 Mobile adjustments */
+
+@media (max-width: 640px) {
+  .portal-block {
+    flex-direction: column;
+    text-align: center;
+  }
+
+  .portal-icon-wrapper {
+    font-size: 3rem;
+  }
+
+  .portal-action {
+    width: 100%;
+  }
+
+  .home-card {
+    padding: 35px 25px;
+  }
+}
+

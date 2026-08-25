@@ -1,0 +1,159 @@
+/* ===== Page Container ===== */
+.page-container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 100vh;  /* Full height */
+  background: #f5f6fa; /* Neutral background, remove gradients */
+  padding: 20px;       /* For small screens */
+  box-sizing: border-box;
+}
+
+/* ===== Login Card ===== */
+.login-card {
+  width: 100%;
+  max-width: 400px;    /* Responsive max width */
+  padding: 30px 25px;
+  background: white;
+  border-radius: 20px;
+  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.12);
+  box-sizing: border-box;
+}
+
+/* ===== Role Switch – Fixed icon visibility ===== */
+.role-switch {
+  display: flex;
+  gap: 12px;
+  margin-bottom: 30px;
+  justify-content: center;
+  flex-wrap: wrap;  /* Wrap on small screens */
+}
+
+.role-btn {
+  flex: 1 1 140px;  /* Responsive flex */
+  max-width: 170px;
+  padding: 12px 14px;
+  border: 2px solid #e0e0e0;
+  border-radius: 16px;
+  background: #f9f9f9;
+  color: #555;
+  font-weight: 600;
+  font-size: 14px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  transition: all 0.3s ease;
+}
+
+.role-btn:hover:not(.active) {
+  background: #f0f2f5;
+  border-color: #bbb;
+}
+
+.role-btn.active {
+  background: #4a7dff;
+  border-color: #4a7dff;
+  color: white;
+  box-shadow: 0 6px 16px rgba(74, 125, 255, 0.35);
+}
+
+/* Icon sizing and colors */
+.role-icon {
+  font-size: 18px;
+  min-width: 20px;
+}
+
+.role-btn.active .role-icon {
+  color: white;
+}
+
+.role-btn:not(.active) .role-icon {
+  color: #666;
+}
+
+/* ===== Title ===== */
+.title {
+  margin: 0 0 32px;
+  font-size: 28px;
+  font-weight: 600;
+  color: #333;
+  text-align: center;
+}
+
+/* ===== Field Groups ===== */
+.field-group {
+  margin-bottom: 22px;
+  text-align: left;
+  position: relative;
+}
+
+.field-group label {
+  display: block;
+  margin-bottom: 8px;
+  font-size: 14px;
+  color: #444;
+  font-weight: 500;
+}
+
+.input-wrapper {
+  position: relative;
+}
+
+.input-wrapper input {
+  width: 100%;
+  padding: 14px 14px 14px 46px;
+  border: 1px solid #ddd;
+  border-radius: 12px;
+  background: #f8f9fa;
+  font-size: 15px;
+  box-sizing: border-box;
+  transition: all 0.3s;
+}
+
+.input-wrapper input:focus {
+  outline: none;
+  border-color: #4a7dff;
+  background: white;
+  box-shadow: 0 0 0 3px rgba(74, 125, 255, 0.15);
+}
+
+.input-icon {
+  position: absolute;
+  left: 14px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: #888;
+  font-size: 18px;
+  pointer-events: none;
+}
+
+/* ===== Error ===== */
+.error {
+  color: #ff4d4f;
+  font-size: 14px;
+  margin-top: -12px;
+  margin-bottom: 12px;
+  text-align: center;
+}
+
+/* ===== Login Button ===== */
+.login-btn {
+  width: 100%;
+  margin-top: 12px;
+  padding: 15px;
+  background: #4a7dff;
+  color: white;
+  border: none;
+  border-radius: 12px;
+  font-size: 17px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s;
+}
+
+.login-btn:hover {
+  background: #3a6bff;
+}
+
