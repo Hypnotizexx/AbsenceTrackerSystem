@@ -1,7 +1,6 @@
-/* Page */
-
+/* ===== Home Page ===== */
 .home-page {
-  background: linear-gradient(135deg, #4f46e5 0%, #6d28d9 100%);
+  background: #f8f9fa;
   min-height: 100vh;
   display: flex;
   align-items: center;
@@ -10,121 +9,196 @@
 }
 
 .home-card {
-  max-width: 1000px;
+  max-width: 900px;
   width: 100%;
-  background: #ffffff;
-  padding: 50px;
-  border-radius: 22px;
-  box-shadow: 0 25px 70px rgba(0, 0, 0, 0.25);
-}
-
-/* Header */
-
-.home-header {
-  text-align: center;
-  margin-bottom: 3rem;
-}
-
-.title {
-  font-size: 2.4rem;
-  font-weight: 700;
-  color: #0f172a;
-  margin-bottom: 0.6rem;
-}
-
-.subtitle {
-  font-size: 1.15rem;
-  color: #475569;
-}
-
-/* Portals layout */
-
-.portals-container {
-  display: flex;
-  gap: 2.5rem;
-  flex-direction: row;
-}
-
-@media (max-width: 768px) {
-  .portals-container {
-    flex-direction: column;
-  }
-}
-
-/* Portal block */
-
-.portal-block {
-  flex: 1;
-  display: flex;
-  gap: 1.8rem;
-  padding: 2.4rem;
-  border-radius: 18px;
-  color: white;
-  align-items: center;
-}
-
-.portal-block.teacher {
-  background: linear-gradient(135deg, #2563eb, #1e40af);
-}
-
-/* Icon */
-
-.portal-icon-wrapper {
-  font-size: 3.4rem;
-  opacity: 0.95;
-  flex-shrink: 0;
-}
-
-/* Content */
-
-.portal-content h3 {
-  font-size: 1.45rem;
-  font-weight: 600;
-  margin-bottom: 0.5rem;
-}
-
-.portal-description {
-  font-size: 1.02rem;
-  line-height: 1.55;
-  opacity: 0.95;
-  margin-bottom: 1.4rem;
-}
-
-/* Button */
-
-.portal-action {
-  background: rgba(255, 255, 255, 0.15);
-  border: 1px solid rgba(255, 255, 255, 0.45);
-  color: white;
-  padding: 0.75rem 1.6rem;
-  border-radius: 10px;
-  cursor: pointer;
-  font-size: 0.95rem;
+  background: white;
+  padding: 60px 50px;
+  border-radius: 16px;
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.08);
   transition: all 0.3s ease;
 }
 
-.portal-action:hover {
-  background: rgba(255, 255, 255, 0.25);
+.home-card:hover {
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
 }
 
-/* 🔹 Mobile adjustments */
+/* ===== Header ===== */
+.home-header {
+  text-align: center;
+  margin-bottom: 48px;
+}
 
-@media (max-width: 640px) {
+.home-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 16px;
+  padding: 8px 12px;
+  background: #edf3fb;
+  color: #4a6fa5;
+  border: 1px solid #d9e6f7;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.6px;
+  text-transform: uppercase;
+}
+
+.title {
+  font-size: 32px;
+  font-weight: 700;
+  color: #1a202c;
+  margin-bottom: 10px;
+  letter-spacing: -0.3px;
+}
+
+.subtitle {
+  font-size: 15px;
+  color: #718096;
+  font-weight: 400;
+  letter-spacing: 0.2px;
+}
+
+/* ===== Portals Container ===== */
+.portals-container {
+  display: flex;
+  gap: 30px;
+  flex-direction: row;
+  justify-content: center;
+}
+
+@media (max-width: 768px) {
+  .home-card {
+    padding: 40px 30px;
+  }
+
+  .title {
+    font-size: 26px;
+  }
+
+  .subtitle {
+    font-size: 14px;
+  }
+
+  .portals-container {
+    flex-direction: column;
+    gap: 20px;
+  }
+}
+
+/* ===== Portal Block ===== */
+.portal-block {
+  flex: 1;
+  display: flex;
+  gap: 24px;
+  padding: 32px;
+  border-radius: 12px;
+  color: white;
+  align-items: center;
+  transition: all 0.3s ease;
+  min-width: 0;
+  max-width: 620px;
+  margin: 0 auto;
+  background: #4a6fa5;
+  box-shadow: 0 4px 12px rgba(74, 111, 165, 0.2);
+}
+
+.portal-block:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 8px 24px rgba(74, 111, 165, 0.3);
+}
+
+/* ===== Portal Icon ===== */
+.portal-icon-wrapper {
+  font-size: 40px;
+  opacity: 1;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 70px;
+  height: 70px;
+  background: rgba(255, 255, 255, 0.15);
+  border-radius: 12px;
+  backdrop-filter: blur(8px);
+}
+
+/* ===== Portal Content ===== */
+.portal-content {
+  flex: 1;
+  min-width: 0;
+}
+
+.portal-content h3 {
+  font-size: 18px;
+  font-weight: 700;
+  margin-bottom: 8px;
+  letter-spacing: -0.2px;
+}
+
+.portal-description {
+  font-size: 14px;
+  line-height: 1.6;
+  opacity: 0.95;
+  margin-bottom: 18px;
+  font-weight: 400;
+}
+
+/* ===== Portal Action Button ===== */
+.portal-action {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background: rgba(255, 255, 255, 0.2);
+  border: 1px solid rgba(255, 255, 255, 0.4);
+  color: white;
+  padding: 11px 24px;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.portal-action:hover {
+  background: rgba(255, 255, 255, 0.3);
+  border-color: rgba(255, 255, 255, 0.6);
+  transform: translateX(2px);
+}
+
+.portal-action:active {
+  transform: translateX(0);
+}
+
+/* ===== Responsive Adjustments ===== */
+@media (max-width: 600px) {
   .portal-block {
+    gap: 16px;
+    padding: 24px;
     flex-direction: column;
     text-align: center;
   }
 
   .portal-icon-wrapper {
-    font-size: 3rem;
+    font-size: 36px;
+    width: 60px;
+    height: 60px;
+  }
+
+  .portal-content h3 {
+    font-size: 16px;
+  }
+
+  .portal-description {
+    font-size: 13px;
+    margin-bottom: 14px;
   }
 
   .portal-action {
     width: 100%;
-  }
-
-  .home-card {
-    padding: 35px 25px;
+    justify-content: center;
   }
 }
 

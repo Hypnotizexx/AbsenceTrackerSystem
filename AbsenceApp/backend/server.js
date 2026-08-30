@@ -106,19 +106,87 @@ app.get("/students/:classe", async (req, res) => {
 // TEACHER POST - Record Absences 
 // ==================================================
 
+function normalizeAbsencePayload(raw) {
+  if (!raw || typeof raw !== "object") {
+    return { valid: false, message: "Données d'absence invalides." };
+  }
+
+  const classe = String(raw.classe || "").trim();
+  const sessions = Array.isArray(raw.sessions) ? raw.sessions : [];
+  const absents = Array.isArray(raw.absents) ? raw.absents : [];
+
+  if (!classe) {
+    return { valid: false, message: "La classe est obligatoire." };
+  }
+
+  if (sessions.length === 0) {
+    return { valid: false, message: "Sélectionnez au moins un créneau." };
+  }
+
+  const normalizedStudents = absents
+    .map((student) => ({
+      code: String(student?.code || "").trim(),
+      nom: String(student?.nom || "").trim(),
+    }))
+    .filter((student) => student.code && student.nom);
+
+  if (normalizedStudents.length === 0) {
+    return { valid: false, message: "Sélectionnez au moins un élève absent." };
+  }
+
+  const uniqueStudents = Array.from(
+    new Map(normalizedStudents.map((student) => [student.code.toLowerCase(), student])).values()
+  );
+
+  const validSessions = sessions
+    .map((session) => ({
+      debut: String(session?.debut || "").trim(),
+      fin: String(session?.fin || "").trim(),
+      duree: Number(session?.duree ?? 2),
+    }))
+    .filter((session) => session.debut && session.fin && Number.isFinite(session.duree) && session.duree > 0);
+
+  if (validSessions.length === 0) {
+    return { valid: false, message: "Les créneaux sélectionnés sont invalides." };
+  }
+
+  return {
+    valid: true,
+    classe,
+    sessions: validSessions,
+    absents: uniqueStudents,
+  };
+}
+
 app.post("/absences", async (req, res) => {
   try {
-    const { classe, sessions, absents } = req.body; 
-    const date = getTodayLocal();
+    const payload = normalizeAbsencePayload(req.body);
+    if (!payload.valid) {
+      return res.status(400).json({ message: payload.message });
+    }
 
+    const { classe, sessions, absents } = payload;
+    const date = getTodayLocal();
     const client = await pool.connect();
+
     try {
       await client.query("BEGIN");
-      
+
+      let insertedCount = 0;
 
       for (const s of sessions) {
-
         for (const a of absents) {
+          const existing = await client.query(
+            `SELECT 1
+             FROM absences
+             WHERE date = $1 AND classe = $2 AND debut = $3 AND fin = $4 AND code = $5
+             LIMIT 1`,
+            [date, classe, s.debut, s.fin, a.code]
+          );
+
+          if (existing.rows.length > 0) {
+            continue;
+          }
 
           await client.query(
             `INSERT INTO absences (date, debut, fin, classe, duree, code, nom, motif, justifiee)
@@ -131,15 +199,21 @@ app.post("/absences", async (req, res) => {
               s.duree,
               a.code,
               a.nom,
-              7,       // default motif "Autre"
-              false    // default justifiee "non"
+              7,
+              false
             ]
           );
+
+          insertedCount += 1;
         }
       }
-      
+
       await client.query("COMMIT");
-      res.json({ message: "Absences enregistrées avec succès !" });
+      return res.status(201).json({
+        message: "Absences enregistrées avec succès !",
+        insertedCount,
+        skippedCount: absents.length * sessions.length - insertedCount,
+      });
     } catch (err) {
       await client.query("ROLLBACK");
       throw err;
@@ -147,8 +221,8 @@ app.post("/absences", async (req, res) => {
       client.release();
     }
   } catch (err) {
-    console.error(err);
-    res.status(500).json({ message: "Erreur serveur lors de l'enregistrement" });
+    console.error("Absence save error:", err);
+    res.status(500).json({ message: "Erreur serveur lors de l'enregistrement des absences." });
   }
 });
 

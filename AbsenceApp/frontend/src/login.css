@@ -3,88 +3,51 @@
   display: flex;
   justify-content: center;
   align-items: center;
-  min-height: 100vh;  /* Full height */
-  background: #f5f6fa; /* Neutral background, remove gradients */
-  padding: 20px;       /* For small screens */
+  min-height: 100vh;
+  background: #f8f9fa;
+  padding: 20px;
   box-sizing: border-box;
 }
 
 /* ===== Login Card ===== */
 .login-card {
   width: 100%;
-  max-width: 400px;    /* Responsive max width */
-  padding: 30px 25px;
+  max-width: 400px;
+  padding: 48px 36px;
   background: white;
-  border-radius: 20px;
-  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.12);
+  border-radius: 12px;
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.08);
   box-sizing: border-box;
-}
-
-/* ===== Role Switch – Fixed icon visibility ===== */
-.role-switch {
-  display: flex;
-  gap: 12px;
-  margin-bottom: 30px;
-  justify-content: center;
-  flex-wrap: wrap;  /* Wrap on small screens */
-}
-
-.role-btn {
-  flex: 1 1 140px;  /* Responsive flex */
-  max-width: 170px;
-  padding: 12px 14px;
-  border: 2px solid #e0e0e0;
-  border-radius: 16px;
-  background: #f9f9f9;
-  color: #555;
-  font-weight: 600;
-  font-size: 14px;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
   transition: all 0.3s ease;
 }
 
-.role-btn:hover:not(.active) {
-  background: #f0f2f5;
-  border-color: #bbb;
-}
-
-.role-btn.active {
-  background: #4a7dff;
-  border-color: #4a7dff;
-  color: white;
-  box-shadow: 0 6px 16px rgba(74, 125, 255, 0.35);
-}
-
-/* Icon sizing and colors */
-.role-icon {
-  font-size: 18px;
-  min-width: 20px;
-}
-
-.role-btn.active .role-icon {
-  color: white;
-}
-
-.role-btn:not(.active) .role-icon {
-  color: #666;
+.login-card:hover {
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
 }
 
 /* ===== Title ===== */
 .title {
-  margin: 0 0 32px;
-  font-size: 28px;
-  font-weight: 600;
-  color: #333;
+  margin: 0 0 8px;
+  font-size: 26px;
+  font-weight: 700;
+  color: #1a202c;
   text-align: center;
+  letter-spacing: -0.3px;
+}
+
+/* ===== Subtitle ===== */
+.subtitle {
+  margin: 0 0 32px;
+  font-size: 14px;
+  color: #718096;
+  text-align: center;
+  font-weight: 400;
+  letter-spacing: 0.2px;
 }
 
 /* ===== Field Groups ===== */
 .field-group {
-  margin-bottom: 22px;
+  margin-bottom: 20px;
   text-align: left;
   position: relative;
 }
@@ -92,68 +55,157 @@
 .field-group label {
   display: block;
   margin-bottom: 8px;
-  font-size: 14px;
-  color: #444;
-  font-weight: 500;
+  font-size: 13px;
+  color: #2c3e50;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
 }
 
 .input-wrapper {
   position: relative;
+  display: flex;
+  align-items: center;
 }
 
 .input-wrapper input {
   width: 100%;
-  padding: 14px 14px 14px 46px;
-  border: 1px solid #ddd;
-  border-radius: 12px;
+  padding: 12px 14px 12px 40px;
+  border: 1px solid #dee2e6;
+  border-radius: 8px;
   background: #f8f9fa;
-  font-size: 15px;
+  font-size: 14px;
+  color: #2c3e50;
+  font-weight: 400;
   box-sizing: border-box;
-  transition: all 0.3s;
+  transition: all 0.2s ease;
+}
+
+.input-wrapper input::placeholder {
+  color: #adb5bd;
+}
+
+.input-wrapper input:hover {
+  border-color: #adb5bd;
+  background: white;
 }
 
 .input-wrapper input:focus {
   outline: none;
-  border-color: #4a7dff;
+  border-color: #4a6fa5;
   background: white;
-  box-shadow: 0 0 0 3px rgba(74, 125, 255, 0.15);
+  box-shadow: 0 0 0 3px rgba(74, 111, 165, 0.08);
 }
 
 .input-icon {
   position: absolute;
-  left: 14px;
-  top: 50%;
-  transform: translateY(-50%);
-  color: #888;
-  font-size: 18px;
+  left: 12px;
+  color: #adb5bd;
+  font-size: 16px;
   pointer-events: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
 }
 
-/* ===== Error ===== */
+.input-wrapper input:focus ~ .input-icon,
+.input-wrapper input:not(:placeholder-shown) ~ .input-icon {
+  color: #4a6fa5;
+}
+
+/* ===== Error Message ===== */
 .error {
-  color: #ff4d4f;
-  font-size: 14px;
-  margin-top: -12px;
-  margin-bottom: 12px;
-  text-align: center;
+  color: #c92a2a;
+  font-size: 12px;
+  margin-top: 6px;
+  font-weight: 500;
+  display: flex;
+  align-items: center;
+  gap: 6px;
 }
 
 /* ===== Login Button ===== */
 .login-btn {
   width: 100%;
-  margin-top: 12px;
-  padding: 15px;
-  background: #4a7dff;
+  margin-top: 28px;
+  padding: 12px 20px;
+  background: #4a6fa5;
   color: white;
   border: none;
-  border-radius: 12px;
-  font-size: 17px;
-  font-weight: 600;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 700;
   cursor: pointer;
-  transition: all 0.3s;
+  transition: all 0.2s ease;
+  box-shadow: 0 2px 8px rgba(74, 111, 165, 0.2);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
 }
 
-.login-btn:hover {
-  background: #3a6bff;
+.login-btn:hover:not(:disabled) {
+  background: #3a5585;
+  box-shadow: 0 4px 14px rgba(74, 111, 165, 0.3);
+  transform: translateY(-1px);
+}
+
+.login-btn:active:not(:disabled) {
+  transform: translateY(0);
+}
+
+.login-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  transform: none;
+}
+
+/* ===== Back Link ===== */
+.back-link {
+  text-align: center;
+  margin-top: 24px;
+}
+
+.back-link button {
+  background: none;
+  border: none;
+  color: #4a6fa5;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  padding: 0;
+  transition: all 0.2s ease;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+}
+
+.back-link button:hover {
+  color: #2c3e50;
+}
+
+/* ===== Responsive ===== */
+@media (max-width: 480px) {
+  .login-card {
+    padding: 36px 28px;
+  }
+
+  .title {
+    font-size: 22px;
+  }
+
+  .field-group {
+    margin-bottom: 18px;
+  }
+
+  .input-wrapper input {
+    padding: 10px 12px 10px 36px;
+    font-size: 13px;
+  }
+
+  .login-btn {
+    padding: 10px 16px;
+    font-size: 13px;
+    margin-top: 24px;
+  }
 }
 

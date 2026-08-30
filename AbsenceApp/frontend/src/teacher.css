@@ -1,86 +1,405 @@
+/* ===== Page Container ===== */
 .page-container {
   display: flex;
   justify-content: center;
-  padding: 20px;
+  padding: 40px 20px;
   min-height: 100vh;
-  background: #f5f6fa;
+  background: #f8f9fa;
   box-sizing: border-box;
 }
 
+/* ===== Dashboard Card ===== */
 .dashboard-card {
   width: 100%;
-  max-width: 1000px;
-  padding: 25px 20px;
+  max-width: 1100px;
+  padding: 50px;
   background: white;
-  border-radius: 20px;
-  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.12);
+  border-radius: 16px;
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.06);
   box-sizing: border-box;
+  transition: box-shadow 0.3s ease;
 }
 
+.dashboard-card:hover {
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+}
+
+/* ===== Back Button ===== */
+.dashboard-topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 24px;
+}
+
+.dashboard-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 7px 11px;
+  background: #edf3fb;
+  border: 1px solid #d9e6f7;
+  border-radius: 999px;
+  color: #4a6fa5;
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.6px;
+}
+
+.back-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  color: #4a6fa5;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  background: none;
+  border: none;
+  padding: 8px 12px;
+  border-radius: 6px;
+  transition: all 0.2s ease;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+}
+
+.back-btn:hover {
+  background: rgba(74, 111, 165, 0.08);
+  color: #2c3e50;
+}
+
+/* ===== Title ===== */
 .title {
-  margin: 0 0 25px;
-  font-size: 26px;
-  font-weight: 600;
-  color: #333;
+  margin: 0 0 8px;
+  font-size: 28px;
+  font-weight: 700;
+  color: #1a202c;
   text-align: center;
+  letter-spacing: -0.3px;
 }
 
+/* ===== Subtitle ===== */
+.subtitle {
+  margin: 0 0 32px;
+  font-size: 15px;
+  font-weight: 400;
+  color: #718096;
+  text-align: center;
+  letter-spacing: 0.2px;
+}
+
+/* ===== Class Selection Section ===== */
+.class-selection-section {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-bottom: 40px;
+}
+
+.class-label {
+  font-size: 14px;
+  font-weight: 600;
+  color: #2c3e50;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 4px;
+}
+
+/* ===== Teacher Select Dropdown ===== */
+.teacher-select {
+  width: 100%;
+  max-width: 420px;
+  padding: 12px 16px;
+  border: 1px solid #dee2e6;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 500;
+  color: #2c3e50;
+  background: white;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  box-sizing: border-box;
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%232c3e50' d='M6 9L1 4h10z'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 14px center;
+  padding-right: 38px;
+}
+
+.teacher-select:hover {
+  border-color: #adb5bd;
+  background-color: #f8f9fa;
+}
+
+.teacher-select:focus {
+  outline: none;
+  border-color: #4a6fa5;
+  box-shadow: 0 0 0 3px rgba(74, 111, 165, 0.08);
+}
+
+/* ===== Bloc Section ===== */
+.bloc-section {
+  margin-bottom: 40px;
+}
+
+.bloc-section-title {
+  font-size: 16px;
+  font-weight: 700;
+  color: #1a202c;
+  margin-bottom: 16px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.bloc-section-title::before {
+  content: "1";
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  background: #4a6fa5;
+  color: white;
+  border-radius: 50%;
+  font-size: 13px;
+  font-weight: 700;
+  flex-shrink: 0;
+}
+
+/* ===== Blocs Container ===== */
+.blocs-container {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+  gap: 10px;
+  margin-top: 12px;
+}
+
+/* ===== Bloc Checkbox Label ===== */
+.bloc-label {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 14px;
+  background: #f8f9fa;
+  border: 1px solid #dee2e6;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  font-size: 13px;
+  font-weight: 500;
+  color: #495057;
+}
+
+.bloc-label:hover {
+  background: #f0f2f5;
+  border-color: #adb5bd;
+}
+
+.bloc-label input[type="checkbox"] {
+  width: 16px;
+  height: 16px;
+  cursor: pointer;
+  accent-color: #4a6fa5;
+  flex-shrink: 0;
+}
+
+/* ===== Students Section ===== */
+.students-section {
+  margin-bottom: 40px;
+}
+
+.students-section-title {
+  font-size: 16px;
+  font-weight: 700;
+  color: #1a202c;
+  margin-bottom: 16px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.students-section-title::before {
+  content: "2";
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  background: #4a6fa5;
+  color: white;
+  border-radius: 50%;
+  font-size: 13px;
+  font-weight: 700;
+  flex-shrink: 0;
+}
+
+/* ===== Table Wrapper ===== */
 .table-wrapper {
   overflow-x: auto;
+  border-radius: 8px;
+  border: 1px solid #dee2e6;
 }
 
+/* ===== Teacher Table ===== */
 .teacher-table {
   width: 100%;
   border-collapse: collapse;
   font-size: 14px;
+  background: white;
 }
 
-.teacher-table th,
-.teacher-table td {
-  border: 1px solid #ddd;
-  padding: 10px 8px;
-  text-align: left;
+.teacher-table thead {
+  background: #f8f9fa;
+  border-bottom: 2px solid #dee2e6;
+  position: sticky;
+  top: 0;
+  z-index: 10;
 }
 
 .teacher-table th {
-  background: #f0f2f5;
-  font-weight: 600;
-  color: #333;
+  padding: 14px 16px;
+  text-align: left;
+  font-weight: 700;
+  color: #2c3e50;
+  letter-spacing: 0.3px;
+  font-size: 12px;
+  text-transform: uppercase;
 }
 
-.teacher-table td input,
-.teacher-table td select,
-.teacher-select {
-  width: 100%;
-  padding: 6px 8px;
-  border: 1px solid #ccc;
-  border-radius: 8px;
-  font-size: 14px;
-  box-sizing: border-box;
+.teacher-table tbody tr {
+  border-bottom: 1px solid #dee2e6;
+  transition: background-color 0.15s ease;
 }
 
-.teacher-table td input:focus,
-.teacher-table td select:focus,
-.teacher-select:focus {
-  outline: none;
-  border-color: #4a7dff;
-  box-shadow: 0 0 0 2px rgba(74, 125, 255, 0.2);
+.teacher-table tbody tr:hover {
+  background: #f8f9fa;
 }
 
-.save-btn {
-  margin-top: 15px;
-  padding: 12px 20px;
-  width: 150px;
-  background: #4a7dff;
-  color: white;
-  font-size: 16px;
-  font-weight: 600;
-  border: none;
-  border-radius: 12px;
+.teacher-table tbody tr:last-child {
+  border-bottom: none;
+}
+
+.teacher-table td {
+  padding: 14px 16px;
+  text-align: left;
+  color: #495057;
+}
+
+.teacher-table td input[type="checkbox"] {
+  width: 18px;
+  height: 18px;
   cursor: pointer;
-  transition: all 0.3s;
+  accent-color: #4a6fa5;
+  transition: all 0.2s ease;
 }
 
-.save-btn:hover {
-  background: #3a6bff;
+.teacher-table td input[type="checkbox"]:hover {
+  transform: scale(1.08);
+}
+
+/* ===== Buttons ===== */
+.save-btn {
+  margin-top: 36px;
+  padding: 12px 32px;
+  background: #4a6fa5;
+  color: white;
+  font-size: 14px;
+  font-weight: 700;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  box-shadow: 0 2px 8px rgba(74, 111, 165, 0.2);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.save-btn:hover:not(:disabled) {
+  background: #3a5585;
+  box-shadow: 0 4px 14px rgba(74, 111, 165, 0.3);
+  transform: translateY(-1px);
+}
+
+.save-btn:active:not(:disabled) {
+  transform: translateY(0);
+}
+
+.save-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.logout-btn {
+  margin-top: 32px;
+  padding: 10px 20px;
+  background: #f0f2f5;
+  color: #495057;
+  font-size: 13px;
+  font-weight: 600;
+  border: 1px solid #dee2e6;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+}
+
+.logout-btn:hover {
+  background: #e9ecef;
+  color: #2c3e50;
+}
+
+/* ===== Empty State ===== */
+.empty-state {
+  text-align: center;
+  padding: 48px 20px;
+  color: #718096;
+}
+
+.empty-state-icon {
+  font-size: 48px;
+  margin-bottom: 16px;
+  opacity: 0.6;
+}
+
+.empty-state-text {
+  font-size: 15px;
+  font-weight: 500;
+}
+
+/* ===== Responsive Design ===== */
+@media (max-width: 768px) {
+  .dashboard-card {
+    padding: 30px 24px;
+  }
+
+  .title {
+    font-size: 22px;
+  }
+
+  .blocs-container {
+    grid-template-columns: repeat(auto-fit, minmax(110px, 1fr));
+  }
+
+  .bloc-label {
+    padding: 10px 12px;
+    font-size: 12px;
+  }
+
+  .teacher-table {
+    font-size: 13px;
+  }
+
+  .teacher-table th,
+  .teacher-table td {
+    padding: 12px 10px;
+  }
 }

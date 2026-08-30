@@ -1,5 +1,6 @@
 import React from "react";
 import { useNavigate } from "react-router-dom";
+import { FaSignOutAlt } from "react-icons/fa";
 import "./teacher.css";
 
 function TeacherDashboard({ user, setSelectedClass }) {
@@ -8,21 +9,38 @@ function TeacherDashboard({ user, setSelectedClass }) {
   const handleSelect = (e) => {
     const cls = e.target.value;
     if (cls) {
-      setSelectedClass(cls); // Set the class in global state
-      navigate("/schedule"); // Trigger redirection
+      setSelectedClass(cls);
+      navigate("/schedule");
     }
+  };
+
+  const handleLogout = () => {
+    localStorage.removeItem("user");
+    window.location.href = "/";
   };
 
   return (
     <div className="page-container">
       <div className="dashboard-card">
-        <h1 className="title">Bienvenue, {user.nom || user.username}</h1>
-        <p className="subtitle" style={{ textAlign: "center" }}>Veuillez sélectionner une classe pour faire l'appel :</p>
+        <div className="dashboard-topbar">
+          <span className="dashboard-badge">Espace enseignant</span>
+          <button 
+            className="back-btn" 
+            onClick={handleLogout}
+            title="Se déconnecter"
+          >
+            <FaSignOutAlt size={16} />
+            Déconnexion
+          </button>
+        </div>
 
-        <div style={{ display: "flex", justifyContent: "center", marginTop: "20px" }}>
+        <h1 className="title">Bienvenue, {user.nom || user.username}</h1>
+        <p className="subtitle">Sélectionnez une classe pour enregistrer les absences</p>
+
+        <div className="class-selection-section">
+          <label className="class-label">Classe disponibles</label>
           <select 
             className="teacher-select" 
-            style={{ width: "100%", maxWidth: "400px", padding: "12px", borderRadius: "10px" }}
             onChange={handleSelect} 
             defaultValue=""
           >
@@ -33,13 +51,14 @@ function TeacherDashboard({ user, setSelectedClass }) {
           </select>
         </div>
 
-        <button 
-          className="back-btn" 
-          onClick={() => { localStorage.removeItem("user"); window.location.href="/"; }}
-          style={{ marginTop: "40px", color: "#666", cursor: "pointer", background: "none", border: "none" }}
-        >
-          Déconnexion
-        </button>
+        {user.classes && user.classes.length === 0 && (
+          <div className="empty-state">
+            <div className="empty-state-icon">📚</div>
+            <div className="empty-state-text">
+              Aucune classe assignée. Veuillez contacter l'administrateur.
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );
