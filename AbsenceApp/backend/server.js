@@ -11,14 +11,22 @@ app.use(bodyParser.json());
 // -------------------
 // PostgreSQL connection
 // -------------------
-const pool = new Pool({
-  user: "postgres",
-  host: "localhost",
-  database: "data",
-  password: "dataB$#^&", 
-  port: 5432,
-});
+// LOCAL DEVELOPMENT CONFIG (keep this active for local use)
+//const pool = new Pool({
+  //user: "postgres",
+  //host: "localhost",
+  //database: "data",
+  //password: "dataB$#^&",
+  //port: 5432,
+//});
 
+// VERCEL / NEON DEPLOYMENT CONFIG
+
+ const pool = new Pool({
+   connectionString: process.env.DATABASE_URL,
+   ssl: process.env.NODE_ENV === "production" ? { rejectUnauthorized: false } : false,
+ });
+//////////// ends here 
 pool.connect()
   .then(() => console.log("Connected to PostgreSQL"))
   .catch(err => console.error("PG error:", err));
