@@ -1,18 +1,17 @@
-// server.js
+// Backend entry point: API routes, validation, database access, and server startup.
 const express = require("express");
 const cors = require("cors");
 const bodyParser = require("body-parser");
 const { Pool } = require("pg");
 
 const app = express();
+
+// Global middleware enables cross-origin frontend requests and JSON request bodies.
 app.use(cors());
 app.use(bodyParser.json());
 
-// -------------------
-// PostgreSQL connection
-// -------------------
-// Use DATABASE_URL for hosted deployments and the documented local database
-// credentials when running the backend directly on the development machine.
+// Database connection: hosted deployments use DATABASE_URL; local deployments use PG* variables.
+// Use DATABASE_URL for hosted databases or PG* variables for an existing local database.
 const pool = process.env.DATABASE_URL
   ? new Pool({
       connectionString: process.env.DATABASE_URL,
@@ -26,31 +25,21 @@ const pool = process.env.DATABASE_URL
       port: Number(process.env.PGPORT) || 5432,
     });
 
-async function ensureAbsenceIdColumn() {
-  await pool.query("ALTER TABLE absences ADD COLUMN IF NOT EXISTS id BIGSERIAL");
-  await pool.query("CREATE UNIQUE INDEX IF NOT EXISTS absences_id_unique ON absences(id)");
-}
+const MOROCCO_TIME_ZONE = "Africa/Casablanca";
 
-pool.connect()
-  .then(async (client) => {
-    try {
-      await client.query("SELECT 1");
-      await ensureAbsenceIdColumn();
-      console.log("Connected to PostgreSQL");
-    } finally {
-      client.release();
-    }
-  })
-  .catch(err => console.error("PG error:", err));
-
-// -------------------
-// Helpers
-// -------------------
+// Return a calendar date in Morocco. Keep this as YYYY-MM-DD to avoid UTC date shifts.
 function getTodayLocal() {
-  const now = new Date();
-  return now.toLocaleDateString('en-CA'); 
+  const parts = new Intl.DateTimeFormat("en", {
+    timeZone: MOROCCO_TIME_ZONE,
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).formatToParts(new Date());
+  const values = Object.fromEntries(parts.map(({ type, value }) => [type, value]));
+  return `${values.year}-${values.month}-${values.day}`;
 }
 
+// Shared parsing and authorization helpers used by teacher routes.
 function parseClasses(value) {
   return Array.isArray(value)
     ? value.map((c) => String(c).trim()).filter(Boolean)
@@ -76,9 +65,17 @@ function isValidTime(value) {
   return /^([01]\d|2[0-3]):[0-5]\d$/.test(String(value || ""));
 }
 
-// ==================================================
-// LOGIN — TEACHER
-// ==================================================
+// Health check used by deployments and monitoring.
+app.get("/health", async (_req, res) => {
+  try {
+    await pool.query("SELECT 1");
+    res.json({ status: "ok" });
+  } catch (err) {
+    res.status(503).json({ status: "error", message: "Base de données indisponible" });
+  }
+});
+
+// Teacher authentication: validates credentials and returns assigned classes.
 app.post("/login/prof", async (req, res) => {
   try {
     const { username, password } = req.body;
@@ -105,9 +102,7 @@ app.post("/login/prof", async (req, res) => {
   }
 });
 
-// ==================================================
-// FETCH STUDENTS BY CLASS
-// ==================================================
+// Student lookup: returns only students from a class the teacher may access.
 app.get("/students/:classe", async (req, res) => {
   try {
     const classe = decodeURIComponent(req.params.classe).trim();
@@ -141,9 +136,7 @@ app.get("/students/:classe", async (req, res) => {
   }
 });
 
-// ==================================================
-// TEACHER POST - Record Absences 
-// ==================================================
+// Absence input normalization: validates and deduplicates the frontend payload.
 
 function normalizeAbsencePayload(raw) {
   if (!raw || typeof raw !== "object") {
@@ -213,6 +206,7 @@ app.post("/absences", async (req, res) => {
     if (!allowedClasses.includes(classe)) {
       return res.status(403).json({ message: "Classe non autorisée pour ce professeur" });
     }
+    // The server is the source of truth for the absence date.
     const date = getTodayLocal();
     const client = await pool.connect();
 
@@ -273,9 +267,7 @@ app.post("/absences", async (req, res) => {
   }
 });
 
-// ==================================================
-// TEACHER ABSENCE MANAGEMENT
-// ==================================================
+// Absence management: list today's records, edit a record, or delete a record.
 app.get("/absences", async (req, res) => {
   try {
     const prof = String(req.query.prof || "").trim();
@@ -295,7 +287,7 @@ app.get("/absences", async (req, res) => {
       ? "date = $1 AND classe = $2"
       : "date = $1 AND classe = ANY($2::text[])";
     const result = await pool.query(
-      `SELECT id, date, debut, fin, classe, duree, code, nom, motif, justifiee
+      `SELECT id, date::text AS date, debut, fin, classe, duree, code, nom, motif, justifiee
        FROM absences
        WHERE ${condition}
        ORDER BY date DESC, debut DESC, classe ASC, nom ASC`,
@@ -330,7 +322,7 @@ app.patch("/absences/:id", async (req, res) => {
       `UPDATE absences
        SET date = $1, debut = $2, fin = $3, duree = $4
        WHERE id = $5 AND classe = ANY($6::text[])
-       RETURNING id, date, debut, fin, classe, duree, code, nom, motif, justifiee`,
+      RETURNING id, date::text AS date, debut, fin, classe, duree, code, nom, motif, justifiee`,
       [date, debut, fin, Number(duree), id, allowedClasses]
     );
 
@@ -371,19 +363,24 @@ app.delete("/absences/:id", async (req, res) => {
   }
 });
 
-// ==================================================
-// START SERVER
-// ==================================================
-// NETWORK CONFIG (edit these when server IP/hostname changes):
-// - HOST should stay 0.0.0.0 so all local-network devices can access backend.
-// - PORT is backend port used by frontend config.
-// - PUBLIC_HOST is only for display logs (IP or Avahi name), e.g.:
-//     PUBLIC_HOST=192.168.1.25
-//     PUBLIC_HOST=absence-app.local
 const PORT = Number(process.env.PORT) || 5000;
 const HOST = process.env.HOST || "0.0.0.0";
-const PUBLIC_HOST = process.env.PUBLIC_HOST || "absence-app.local";
 
-app.listen(PORT, HOST, () => {
-  console.log(`Backend running on http://${PUBLIC_HOST}:${PORT} (bind ${HOST})`);
-});
+// Start only after confirming that PostgreSQL is reachable.
+async function startServer() {
+  try {
+    await pool.query("SELECT 1");
+    app.listen(PORT, HOST, () => {
+      console.log(`Backend running on http://${HOST}:${PORT}`);
+    });
+  } catch (err) {
+    console.error("Backend startup failed. Check PostgreSQL and the PG settings.", err.message);
+    process.exitCode = 1;
+  }
+}
+
+if (require.main === module) {
+  startServer();
+}
+
+module.exports = app;

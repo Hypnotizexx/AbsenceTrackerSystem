@@ -1,11 +1,12 @@
+// Teacher login screen: submits credentials and stores the authenticated user.
 import React, { useState } from "react";
-import axios from "axios";
 import { useNavigate } from "react-router-dom";
 import { FaUser, FaLock, FaExclamationCircle } from "react-icons/fa";
 import "./login.css";
 import API_BASE_URL from './config'; 
 
 export default function Login({ setUser }) {
+  // Form fields and request state are kept local to the login screen.
   const navigate = useNavigate();
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
@@ -13,21 +14,29 @@ export default function Login({ setUser }) {
   const [isLoading, setIsLoading] = useState(false);
 
   const handleLogin = async (e) => {
+    // Send credentials to the backend and redirect only after successful login.
     e.preventDefault();
     setError("");
     setIsLoading(true);
 
     try {
-      const res = await axios.post(`${API_BASE_URL}/login/prof`, {
-        username: username.trim(),
-        password,
+      const res = await fetch(`${API_BASE_URL}/login/prof`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ username: username.trim(), password }),
       });
-      
-      setUser(res.data.user);
-      localStorage.setItem("user", JSON.stringify(res.data.user));
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        const error = new Error(data.message || "Connexion impossible");
+        error.status = res.status;
+        throw error;
+      }
+
+      setUser(data.user);
+      localStorage.setItem("user", JSON.stringify(data.user));
       navigate("/dashboard");
     } catch (err) {
-      if (err.response?.status === 401) {
+      if (err.status === 401) {
         setError("Identifiants incorrects. Vérifiez votre nom d'utilisateur et mot de passe.");
       } else {
         setError("Serveur indisponible. Veuillez réessayer dans quelques instants.");
@@ -44,7 +53,7 @@ export default function Login({ setUser }) {
         <p className="subtitle">Accédez à votre portail enseignant</p>
 
         <form onSubmit={handleLogin}>
-          {/* Error Message ===== */}
+          {/* Authentication error feedback */}
           {error && (
             <div className="error" style={{ marginBottom: "20px", display: "flex", gap: "8px" }}>
               <FaExclamationCircle size={16} style={{ flexShrink: 0 }} />
@@ -52,7 +61,7 @@ export default function Login({ setUser }) {
             </div>
           )}
 
-          {/* Username Field ===== */}
+          {/* Username field */}
           <div className="field-group">
             <label htmlFor="username">Nom d'utilisateur</label>
             <div className="input-wrapper">
@@ -69,7 +78,7 @@ export default function Login({ setUser }) {
             </div>
           </div>
 
-          {/* Password Field ===== */}
+          {/* Password field */}
           <div className="field-group">
             <label htmlFor="password">Mot de passe</label>
             <div className="input-wrapper">
@@ -86,7 +95,7 @@ export default function Login({ setUser }) {
             </div>
           </div>
 
-          {/* Login Button ===== */}
+          {/* Submit action */}
           <button 
             type="submit" 
             className="login-btn"
@@ -96,7 +105,7 @@ export default function Login({ setUser }) {
           </button>
         </form>
 
-        {/* Back Link ===== */}
+        {/* Return to the home screen */}
         <div style={{ textAlign: "center", marginTop: "24px" }}>
           <button 
             onClick={() => navigate("/")}

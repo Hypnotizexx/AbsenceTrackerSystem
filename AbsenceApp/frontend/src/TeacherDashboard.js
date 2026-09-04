@@ -1,3 +1,4 @@
+// Teacher dashboard: lets an authenticated teacher choose an assigned class.
 import React from "react";
 import { useNavigate } from "react-router-dom";
 import { FaSignOutAlt } from "react-icons/fa";
@@ -7,6 +8,7 @@ function TeacherDashboard({ user, setSelectedClass }) {
   const navigate = useNavigate();
 
   const handleSelect = (e) => {
+    // Store the class before opening the absence schedule.
     const cls = e.target.value;
     if (cls) {
       setSelectedClass(cls);
@@ -15,6 +17,7 @@ function TeacherDashboard({ user, setSelectedClass }) {
   };
 
   const handleLogout = () => {
+    // Clear the persisted session and return to the public home page.
     localStorage.removeItem("user");
     window.location.href = "/";
   };
@@ -37,6 +40,7 @@ function TeacherDashboard({ user, setSelectedClass }) {
         <h1 className="title">Bienvenue, {user.nom || user.username}</h1>
         <p className="subtitle">Sélectionnez une classe pour enregistrer les absences</p>
 
+        {/* Class selection is limited to classes returned during login. */}
         <div className="class-selection-section">
           <label className="class-label">Classe disponibles</label>
           <select 

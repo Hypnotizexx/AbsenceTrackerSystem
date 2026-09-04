@@ -1,3 +1,4 @@
+// Application shell: owns authentication state and the teacher route map.
 import React, { useState, useEffect } from "react";
 import { BrowserRouter as Router, Routes, Route, Navigate } from "react-router-dom";
 import Home from "./Home";
@@ -6,15 +7,17 @@ import TeacherDashboard from "./TeacherDashboard";
 import Schedule from "./Schedule";
 
 export default function App() {
+  // Restore the logged-in teacher so a page refresh does not lose the session.
   const [user, setUser] = useState(() => {
     const saved = localStorage.getItem("user");
     return saved ? JSON.parse(saved) : null;
   });
 
-  // State to track which class the teacher selected
+  // The selected class is passed from the dashboard to the schedule page.
   const [selectedClass, setSelectedClass] = useState(null);
 
   useEffect(() => {
+    // Keep localStorage synchronized with the current authentication state.
     if (user) localStorage.setItem("user", JSON.stringify(user));
     else localStorage.removeItem("user");
   }, [user]);
@@ -26,7 +29,7 @@ export default function App() {
         
         <Route path="/login" element={<Login setUser={setUser} />} />
 
-        {/* Teacher Routes */}
+        {/* Protected teacher routes */}
         <Route 
           path="/dashboard" 
           element={user?.role === "prof" ? <TeacherDashboard user={user} setSelectedClass={setSelectedClass} /> : <Navigate to="/" />} 

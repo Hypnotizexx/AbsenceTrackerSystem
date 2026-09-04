@@ -1,8 +1,14 @@
+// Absence schedule: loads students, records today's absences, and manages saved records.
 import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { FaArrowLeft, FaCheckCircle, FaTimesCircle, FaTrash, FaEye, FaEdit } from "react-icons/fa";
 import "./teacher.css"; 
 import API_BASE_URL from './config';  
+
+function calendarDate(value) {
+  // Database DATE values are calendar strings; never pass them through Date/UTC conversion.
+  return String(value || "").slice(0, 10);
+}
 
 export default function Schedule({ user, selectedClass }) {
   const navigate = useNavigate();
@@ -18,6 +24,7 @@ export default function Schedule({ user, selectedClass }) {
   const [error, setError] = useState("");
   const [successMessage, setSuccessMessage] = useState("");
 
+  // Available teaching time blocks shown in the record form.
   const blocs = [
     { debut: "08:30", fin: "10:30" }, 
     { debut: "10:30", fin: "12:30" },
@@ -30,6 +37,7 @@ export default function Schedule({ user, selectedClass }) {
   ];
 
   useEffect(() => {
+    // Reload students and today's saved absences whenever the selected class changes.
     if (!selectedClass) {
       setStudents([]);
       return;
@@ -74,6 +82,7 @@ export default function Schedule({ user, selectedClass }) {
   }, [selectedClass, user?.nom]);
 
   const refreshSavedAbsences = async () => {
+    // Refresh the saved list after create or edit operations.
     const params = new URLSearchParams({
       prof: user?.nom || "",
       classe: selectedClass,
@@ -85,9 +94,10 @@ export default function Schedule({ user, selectedClass }) {
   };
 
   const startEditingAbsence = (absence) => {
+    // Copy one saved record into the inline edit form.
     setEditingAbsence(absence.id);
     setAbsenceForm({
-      date: String(absence.date).slice(0, 10),
+      date: calendarDate(absence.date),
       debut: String(absence.debut).slice(0, 5),
       fin: String(absence.fin).slice(0, 5),
       duree: absence.duree,
@@ -101,6 +111,7 @@ export default function Schedule({ user, selectedClass }) {
   };
 
   const updateAbsence = async (event) => {
+    // Persist changes through the protected backend endpoint.
     event.preventDefault();
     try {
       setIsSavingAbsence(true);
@@ -124,6 +135,7 @@ export default function Schedule({ user, selectedClass }) {
   };
 
   const removeSavedAbsence = async (id) => {
+    // Delete one saved record after teacher confirmation.
     if (!window.confirm("Supprimer cette absence ?")) return;
     try {
       setError("");
@@ -140,6 +152,7 @@ export default function Schedule({ user, selectedClass }) {
   };
 
   const toggleBloc = (b) => {
+    // Add or remove a time block from the new absence payload.
     setSelectedBlocs((prev) => {
       const exists = prev.some((s) => s.debut === b.debut);
       return exists ? prev.filter((s) => s.debut !== b.debut) : [...prev, b];
@@ -149,6 +162,7 @@ export default function Schedule({ user, selectedClass }) {
   };
 
   const toggleAbsent = (st) => {
+    // Add or remove a student from the new absence payload.
     setAbsents((prev) => {
       const exists = prev.some((a) => a.code === st.code);
       return exists ? prev.filter((a) => a.code !== st.code) : [...prev, st];
@@ -164,6 +178,7 @@ export default function Schedule({ user, selectedClass }) {
   };
 
   const handleSave = async () => {
+    // Validate the selection; the backend assigns Morocco's current date.
     if (!selectedClass) {
       setError("Aucune classe sélectionnée.");
       return;
@@ -251,7 +266,7 @@ export default function Schedule({ user, selectedClass }) {
           </button>
         </div>
 
-        {/* Messages ===== */}
+        {/* Request status and success/error feedback */}
         {error && (
           <div style={{
             padding: "12px 14px",
@@ -371,7 +386,7 @@ export default function Schedule({ user, selectedClass }) {
           )}
         </div>
 
-        {/* Saved Absences Section */}
+        {/* Today's saved absence records */}
         <div className={`saved-absences-section ${activeSection !== "saved" ? "schedule-section-hidden" : ""}`}>
           <div className="students-section-title">Absences enregistrées</div>
           {savedAbsences.length === 0 ? (
@@ -395,7 +410,7 @@ export default function Schedule({ user, selectedClass }) {
                           <strong>{absence.nom}</strong>
                           <small>{absence.code}</small>
                         </td>
-                        <td>{String(absence.date).slice(0, 10)}</td>
+                        <td>{calendarDate(absence.date)}</td>
                         <td>{String(absence.debut).slice(0, 5)} - {String(absence.fin).slice(0, 5)}</td>
                         <td className="absence-actions">
                           <button className="icon-action edit-action" onClick={() => startEditingAbsence(absence)} title="Modifier cette absence">
@@ -431,7 +446,7 @@ export default function Schedule({ user, selectedClass }) {
           )}
         </div>
 
-        {/* Preview Section - Marked Absences ===== */}
+        {/* Preview of students selected for the next save */}
         {absents.length > 0 && (
           <div className={`preview-section ${activeSection !== "record" ? "schedule-section-hidden" : ""}`} style={{
             marginTop: "30px",
@@ -543,7 +558,7 @@ export default function Schedule({ user, selectedClass }) {
           </div>
         )}
 
-        {/* Save Button ===== */}
+        {/* Submit the new absence records */}
         <button 
           className={`save-btn ${activeSection !== "record" ? "schedule-section-hidden" : ""}`} 
           onClick={handleSave}
