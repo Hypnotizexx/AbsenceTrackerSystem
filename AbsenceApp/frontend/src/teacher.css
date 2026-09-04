@@ -90,6 +90,63 @@
   letter-spacing: 0.2px;
 }
 
+.schedule-tabs {
+  display: flex;
+  gap: 4px;
+  margin-bottom: 30px;
+  padding: 4px;
+  background: #f1f5f9;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+}
+
+.schedule-tab {
+  flex: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 42px;
+  padding: 9px 14px;
+  border: 1px solid transparent;
+  border-radius: 6px;
+  background: transparent;
+  color: #64748b;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.schedule-tab:hover {
+  color: #334155;
+  background: rgba(255, 255, 255, 0.65);
+}
+
+.schedule-tab.active {
+  color: #2c3e50;
+  background: white;
+  border-color: #d9e6f7;
+  box-shadow: 0 1px 3px rgba(15, 23, 42, 0.08);
+}
+
+.schedule-tab-count {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 20px;
+  height: 20px;
+  padding: 0 5px;
+  border-radius: 999px;
+  background: #4a6fa5;
+  color: white;
+  font-size: 11px;
+}
+
+.schedule-section-hidden {
+  display: none !important;
+}
+
 /* ===== Class Selection Section ===== */
 .class-selection-section {
   display: flex;
@@ -213,6 +270,17 @@
   margin-bottom: 40px;
 }
 
+.saved-absences-section {
+  margin-bottom: 40px;
+}
+
+.compact-empty-state {
+  padding: 28px 20px;
+  border: 1px dashed #dee2e6;
+  border-radius: 8px;
+  font-size: 14px;
+}
+
 .students-section-title {
   font-size: 16px;
   font-weight: 700;
@@ -302,6 +370,124 @@
 
 .teacher-table td input[type="checkbox"]:hover {
   transform: scale(1.08);
+}
+
+.saved-absences-table small {
+  display: block;
+  margin-top: 3px;
+  color: #718096;
+  font-size: 11px;
+}
+
+.actions-column {
+  width: 210px;
+}
+
+.absence-actions {
+  display: flex;
+  gap: 8px;
+  white-space: nowrap;
+}
+
+.icon-action,
+.secondary-action,
+.save-inline-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  border: 1px solid transparent;
+  border-radius: 6px;
+  padding: 7px 9px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.edit-action {
+  color: #4a6fa5;
+  background: #edf3fb;
+  border-color: #d9e6f7;
+}
+
+.edit-action:hover {
+  background: #dfeaf8;
+}
+
+.delete-action {
+  color: #b42318;
+  background: #fff1f0;
+  border-color: #ffd3cf;
+}
+
+.delete-action:hover {
+  background: #ffe3df;
+}
+
+.edit-row {
+  background: #f8fafc;
+}
+
+.edit-row td {
+  padding: 16px;
+}
+
+.absence-edit-form {
+  display: flex;
+  align-items: end;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.absence-edit-form label {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  color: #475569;
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.absence-edit-form input {
+  padding: 8px 9px;
+  border: 1px solid #cbd5e1;
+  border-radius: 6px;
+  color: #334155;
+  font: inherit;
+  text-transform: none;
+}
+
+.absence-edit-form input:focus {
+  outline: none;
+  border-color: #4a6fa5;
+  box-shadow: 0 0 0 3px rgba(74, 111, 165, 0.08);
+}
+
+.edit-form-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.secondary-action {
+  color: #475569;
+  background: white;
+  border-color: #cbd5e1;
+}
+
+.save-inline-btn {
+  color: white;
+  background: #4a6fa5;
+}
+
+.save-inline-btn:hover:not(:disabled) {
+  background: #3a5585;
+}
+
+.save-inline-btn:disabled {
+  cursor: not-allowed;
+  opacity: 0.6;
 }
 
 /* ===== Buttons ===== */
@@ -401,5 +587,13 @@
   .teacher-table th,
   .teacher-table td {
     padding: 12px 10px;
+  }
+
+  .saved-absences-table {
+    min-width: 680px;
+  }
+
+  .absence-edit-form {
+    align-items: stretch;
   }
 }

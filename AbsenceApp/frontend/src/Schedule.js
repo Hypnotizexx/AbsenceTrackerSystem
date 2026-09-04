@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { FaArrowLeft, FaCheckCircle, FaTimesCircle, FaTrash, FaEye } from "react-icons/fa";
+import { FaArrowLeft, FaCheckCircle, FaTimesCircle, FaTrash, FaEye, FaEdit } from "react-icons/fa";
 import "./teacher.css"; 
 import API_BASE_URL from './config';  
 
@@ -9,6 +9,11 @@ export default function Schedule({ user, selectedClass }) {
   const [students, setStudents] = useState([]);
   const [selectedBlocs, setSelectedBlocs] = useState([]);
   const [absents, setAbsents] = useState([]);
+  const [savedAbsences, setSavedAbsences] = useState([]);
+  const [editingAbsence, setEditingAbsence] = useState(null);
+  const [absenceForm, setAbsenceForm] = useState({ date: "", debut: "", fin: "", duree: 2 });
+  const [isSavingAbsence, setIsSavingAbsence] = useState(false);
+  const [activeSection, setActiveSection] = useState("record");
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState("");
   const [successMessage, setSuccessMessage] = useState("");
@@ -34,28 +39,105 @@ export default function Schedule({ user, selectedClass }) {
     setError("");
     setStudents([]);
     setAbsents([]);
+    setSavedAbsences([]);
     setSelectedBlocs([]);
 
     const params = new URLSearchParams();
     if (user?.nom) params.set("prof", user.nom);
+    params.set("classe", selectedClass);
 
-    fetch(`${API_BASE_URL}/students/${encodeURIComponent(selectedClass)}?${params}`)
-      .then((res) => {
-        if (!res.ok) throw new Error("Impossible de charger les élèves");
-        return res.json();
+    Promise.all([
+      fetch(`${API_BASE_URL}/students/${encodeURIComponent(selectedClass)}?prof=${encodeURIComponent(user?.nom || "")}`),
+      fetch(`${API_BASE_URL}/absences?${params}`),
+    ])
+      .then(async ([studentsRes, absencesRes]) => {
+        if (!studentsRes.ok) throw new Error("Impossible de charger les élèves");
+        if (!absencesRes.ok) {
+          const data = await absencesRes.json().catch(() => ({}));
+          throw new Error(data.message || "Impossible de charger les absences");
+        }
+        return [await studentsRes.json(), await absencesRes.json()];
       })
-      .then((data) => {
-        const list = Array.isArray(data) ? data : [];
+      .then(([studentData, absenceData]) => {
+        const list = Array.isArray(studentData) ? studentData : [];
         const filtered = list.filter((st) => st.classe === selectedClass);
         setStudents(filtered);
+        setSavedAbsences(Array.isArray(absenceData) ? absenceData : []);
         setIsLoading(false);
       })
       .catch((err) => {
         setError(err.message || "Erreur lors du chargement");
         setStudents([]);
+        setSavedAbsences([]);
         setIsLoading(false);
       });
   }, [selectedClass, user?.nom]);
+
+  const refreshSavedAbsences = async () => {
+    const params = new URLSearchParams({
+      prof: user?.nom || "",
+      classe: selectedClass,
+    });
+    const res = await fetch(`${API_BASE_URL}/absences?${params}`);
+    const data = await res.json().catch(() => []);
+    if (!res.ok) throw new Error(data.message || "Impossible de charger les absences");
+    setSavedAbsences(Array.isArray(data) ? data : []);
+  };
+
+  const startEditingAbsence = (absence) => {
+    setEditingAbsence(absence.id);
+    setAbsenceForm({
+      date: String(absence.date).slice(0, 10),
+      debut: String(absence.debut).slice(0, 5),
+      fin: String(absence.fin).slice(0, 5),
+      duree: absence.duree,
+    });
+    setError("");
+  };
+
+  const cancelEditingAbsence = () => {
+    setEditingAbsence(null);
+    setAbsenceForm({ date: "", debut: "", fin: "", duree: 2 });
+  };
+
+  const updateAbsence = async (event) => {
+    event.preventDefault();
+    try {
+      setIsSavingAbsence(true);
+      setError("");
+      const res = await fetch(`${API_BASE_URL}/absences/${editingAbsence}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ ...absenceForm, prof: user?.nom }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.message || "Erreur lors de la modification.");
+      cancelEditingAbsence();
+      await refreshSavedAbsences();
+      setSuccessMessage("Absence modifiée avec succès.");
+      setTimeout(() => setSuccessMessage(""), 3000);
+    } catch (err) {
+      setError(err.message || "Erreur serveur.");
+    } finally {
+      setIsSavingAbsence(false);
+    }
+  };
+
+  const removeSavedAbsence = async (id) => {
+    if (!window.confirm("Supprimer cette absence ?")) return;
+    try {
+      setError("");
+      const params = new URLSearchParams({ prof: user?.nom || "" });
+      const res = await fetch(`${API_BASE_URL}/absences/${id}?${params}`, { method: "DELETE" });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.message || "Erreur lors de la suppression.");
+      setSavedAbsences((prev) => prev.filter((absence) => absence.id !== id));
+      setSuccessMessage("Absence supprimée avec succès.");
+      setTimeout(() => setSuccessMessage(""), 3000);
+    } catch (err) {
+      setError(err.message || "Erreur serveur.");
+    }
+  };
 
   const toggleBloc = (b) => {
     setSelectedBlocs((prev) => {
@@ -111,6 +193,7 @@ export default function Schedule({ user, selectedClass }) {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           classe: selectedClass,
+          prof: user?.nom,
           sessions,
           absents,
         }),
@@ -121,10 +204,12 @@ export default function Schedule({ user, selectedClass }) {
       if (!res.ok) {
         throw new Error(data.message || "Erreur lors de l'enregistrement des absences.");
       }
-      
+
+      await refreshSavedAbsences();
       setSuccessMessage("✓ Données enregistrées avec succès!");
       setAbsents([]);
       setSelectedBlocs([]);
+      setActiveSection("saved");
       setTimeout(() => setSuccessMessage(""), 3000);
     } catch (err) {
       setError(err.message || "Erreur serveur. Vérifiez votre connexion.");
@@ -145,6 +230,26 @@ export default function Schedule({ user, selectedClass }) {
 
         <h2 className="title">Enregistrement des absences</h2>
         <p className="subtitle">Classe : <strong>{selectedClass}</strong></p>
+
+        <div className="schedule-tabs" role="tablist" aria-label="Sections du planning">
+          <button
+            className={`schedule-tab ${activeSection === "record" ? "active" : ""}`}
+            onClick={() => setActiveSection("record")}
+            role="tab"
+            aria-selected={activeSection === "record"}
+          >
+            1. Saisir une absence
+          </button>
+          <button
+            className={`schedule-tab ${activeSection === "saved" ? "active" : ""}`}
+            onClick={() => setActiveSection("saved")}
+            role="tab"
+            aria-selected={activeSection === "saved"}
+          >
+            2. Absences enregistrées
+            {savedAbsences.length > 0 && <span className="schedule-tab-count">{savedAbsences.length}</span>}
+          </button>
+        </div>
 
         {/* Messages ===== */}
         {error && (
@@ -186,7 +291,7 @@ export default function Schedule({ user, selectedClass }) {
         )}
 
         {/* Bloc Selection Section ===== */}
-        <div className="bloc-section">
+        <div className={`bloc-section ${activeSection !== "record" ? "schedule-section-hidden" : ""}`}>
           <div className="bloc-section-title">Sélectionnez les créneaux</div>
           <div className="blocs-container">
             {blocs.map((b) => (
@@ -213,7 +318,7 @@ export default function Schedule({ user, selectedClass }) {
         </div>
 
         {/* Students Section ===== */}
-        <div className="students-section">
+        <div className={`students-section ${activeSection !== "record" ? "schedule-section-hidden" : ""}`}>
           <div className="students-section-title">Liste des élèves</div>
           
           {isLoading ? (
@@ -266,9 +371,69 @@ export default function Schedule({ user, selectedClass }) {
           )}
         </div>
 
+        {/* Saved Absences Section */}
+        <div className={`saved-absences-section ${activeSection !== "saved" ? "schedule-section-hidden" : ""}`}>
+          <div className="students-section-title">Absences enregistrées</div>
+          {savedAbsences.length === 0 ? (
+            <div className="empty-state compact-empty-state">Aucune absence enregistrée pour cette classe</div>
+          ) : (
+            <div className="table-wrapper">
+              <table className="teacher-table saved-absences-table">
+                <thead>
+                  <tr>
+                    <th>Élève</th>
+                    <th>Date</th>
+                    <th>Horaire</th>
+                    <th className="actions-column">Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {savedAbsences.map((absence) => (
+                    <React.Fragment key={absence.id}>
+                      <tr>
+                        <td>
+                          <strong>{absence.nom}</strong>
+                          <small>{absence.code}</small>
+                        </td>
+                        <td>{String(absence.date).slice(0, 10)}</td>
+                        <td>{String(absence.debut).slice(0, 5)} - {String(absence.fin).slice(0, 5)}</td>
+                        <td className="absence-actions">
+                          <button className="icon-action edit-action" onClick={() => startEditingAbsence(absence)} title="Modifier cette absence">
+                            <FaEdit />
+                            Modifier
+                          </button>
+                          <button className="icon-action delete-action" onClick={() => removeSavedAbsence(absence.id)} title="Supprimer cette absence">
+                            <FaTrash />
+                            Supprimer
+                          </button>
+                        </td>
+                      </tr>
+                      {editingAbsence === absence.id && (
+                        <tr className="edit-row">
+                          <td colSpan="4">
+                            <form className="absence-edit-form" onSubmit={updateAbsence}>
+                              <label>Date<input type="date" value={absenceForm.date} onChange={(event) => setAbsenceForm({ ...absenceForm, date: event.target.value })} required /></label>
+                              <label>Début<input className="time-24-input" type="text" inputMode="numeric" pattern="(?:[01]\d|2[0-3]):[0-5]\d" maxLength="5" placeholder="HH:MM" value={absenceForm.debut} onChange={(event) => setAbsenceForm({ ...absenceForm, debut: event.target.value })} required /></label>
+                              <label>Fin<input className="time-24-input" type="text" inputMode="numeric" pattern="(?:[01]\d|2[0-3]):[0-5]\d" maxLength="5" placeholder="HH:MM" value={absenceForm.fin} onChange={(event) => setAbsenceForm({ ...absenceForm, fin: event.target.value })} required /></label>
+                              <div className="edit-form-actions">
+                                <button type="button" className="secondary-action" onClick={cancelEditingAbsence}>Annuler</button>
+                                <button type="submit" className="save-inline-btn" disabled={isSavingAbsence}>{isSavingAbsence ? "Enregistrement..." : "Enregistrer"}</button>
+                              </div>
+                            </form>
+                          </td>
+                        </tr>
+                      )}
+                    </React.Fragment>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
+
         {/* Preview Section - Marked Absences ===== */}
         {absents.length > 0 && (
-          <div className="preview-section" style={{
+          <div className={`preview-section ${activeSection !== "record" ? "schedule-section-hidden" : ""}`} style={{
             marginTop: "30px",
             padding: "20px",
             background: "#f9fafb",
@@ -380,7 +545,7 @@ export default function Schedule({ user, selectedClass }) {
 
         {/* Save Button ===== */}
         <button 
-          className="save-btn" 
+          className={`save-btn ${activeSection !== "record" ? "schedule-section-hidden" : ""}`} 
           onClick={handleSave}
           disabled={selectedBlocs.length === 0}
         >

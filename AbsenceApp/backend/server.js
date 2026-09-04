@@ -11,24 +11,36 @@ app.use(bodyParser.json());
 // -------------------
 // PostgreSQL connection
 // -------------------
-// LOCAL DEVELOPMENT CONFIG (keep this active for local use)
-//const pool = new Pool({
-  //user: "postgres",
-  //host: "localhost",
-  //database: "data",
-  //password: "dataB$#^&",
-  //port: 5432,
-//});
+// Use DATABASE_URL for hosted deployments and the documented local database
+// credentials when running the backend directly on the development machine.
+const pool = process.env.DATABASE_URL
+  ? new Pool({
+      connectionString: process.env.DATABASE_URL,
+      ssl: process.env.NODE_ENV === "production" ? { rejectUnauthorized: false } : false,
+    })
+  : new Pool({
+      user: process.env.PGUSER || "postgres",
+      host: process.env.PGHOST || "localhost",
+      database: process.env.PGDATABASE || "data",
+      password: process.env.PGPASSWORD || "dataB$#^&",
+      port: Number(process.env.PGPORT) || 5432,
+    });
 
-// VERCEL / NEON DEPLOYMENT CONFIG
+async function ensureAbsenceIdColumn() {
+  await pool.query("ALTER TABLE absences ADD COLUMN IF NOT EXISTS id BIGSERIAL");
+  await pool.query("CREATE UNIQUE INDEX IF NOT EXISTS absences_id_unique ON absences(id)");
+}
 
- const pool = new Pool({
-   connectionString: process.env.DATABASE_URL,
-   ssl: process.env.NODE_ENV === "production" ? { rejectUnauthorized: false } : false,
- });
-//////////// ends here 
 pool.connect()
-  .then(() => console.log("Connected to PostgreSQL"))
+  .then(async (client) => {
+    try {
+      await client.query("SELECT 1");
+      await ensureAbsenceIdColumn();
+      console.log("Connected to PostgreSQL");
+    } finally {
+      client.release();
+    }
+  })
   .catch(err => console.error("PG error:", err));
 
 // -------------------
@@ -43,6 +55,25 @@ function parseClasses(value) {
   return Array.isArray(value)
     ? value.map((c) => String(c).trim()).filter(Boolean)
     : String(value || "").split(",").map((c) => c.trim()).filter(Boolean);
+}
+
+async function getTeacherClasses(prof) {
+  if (!prof) return null;
+
+  const teacher = await pool.query(
+    "SELECT classes FROM encadrants WHERE LOWER(nom) = LOWER($1)",
+    [prof]
+  );
+
+  return teacher.rows.length > 0 ? parseClasses(teacher.rows[0].classes) : null;
+}
+
+function isValidDate(value) {
+  return /^\d{4}-\d{2}-\d{2}$/.test(String(value || ""));
+}
+
+function isValidTime(value) {
+  return /^([01]\d|2[0-3]):[0-5]\d$/.test(String(value || ""));
 }
 
 // ==================================================
@@ -174,6 +205,14 @@ app.post("/absences", async (req, res) => {
     }
 
     const { classe, sessions, absents } = payload;
+    const prof = String(req.body.prof || "").trim();
+    const allowedClasses = await getTeacherClasses(prof);
+    if (!prof || !allowedClasses) {
+      return res.status(403).json({ message: "Professeur inconnu" });
+    }
+    if (!allowedClasses.includes(classe)) {
+      return res.status(403).json({ message: "Classe non autorisée pour ce professeur" });
+    }
     const date = getTodayLocal();
     const client = await pool.connect();
 
@@ -231,6 +270,104 @@ app.post("/absences", async (req, res) => {
   } catch (err) {
     console.error("Absence save error:", err);
     res.status(500).json({ message: "Erreur serveur lors de l'enregistrement des absences." });
+  }
+});
+
+// ==================================================
+// TEACHER ABSENCE MANAGEMENT
+// ==================================================
+app.get("/absences", async (req, res) => {
+  try {
+    const prof = String(req.query.prof || "").trim();
+    const classe = String(req.query.classe || "").trim();
+    const allowedClasses = await getTeacherClasses(prof);
+
+    if (!prof || !allowedClasses) {
+      return res.status(403).json({ message: "Professeur inconnu" });
+    }
+    if (classe && !allowedClasses.includes(classe)) {
+      return res.status(403).json({ message: "Classe non autorisée pour ce professeur" });
+    }
+
+    const today = getTodayLocal();
+    const values = classe ? [today, classe] : [today, allowedClasses];
+    const condition = classe
+      ? "date = $1 AND classe = $2"
+      : "date = $1 AND classe = ANY($2::text[])";
+    const result = await pool.query(
+      `SELECT id, date, debut, fin, classe, duree, code, nom, motif, justifiee
+       FROM absences
+       WHERE ${condition}
+       ORDER BY date DESC, debut DESC, classe ASC, nom ASC`,
+      values
+    );
+
+    res.json(result.rows);
+  } catch (err) {
+    console.error("Absence fetch error:", err);
+    res.status(500).json({ message: "Erreur serveur lors du chargement des absences." });
+  }
+});
+
+app.patch("/absences/:id", async (req, res) => {
+  try {
+    const id = Number(req.params.id);
+    const prof = String(req.body.prof || "").trim();
+    const { date, debut, fin, duree } = req.body;
+    const allowedClasses = await getTeacherClasses(prof);
+
+    if (!Number.isInteger(id) || id < 1 || !allowedClasses) {
+      return res.status(400).json({ message: "Données de modification invalides." });
+    }
+    if (!isValidDate(date) || !isValidTime(debut) || !isValidTime(fin)) {
+      return res.status(400).json({ message: "La date ou les horaires sont invalides." });
+    }
+    if (!Number.isFinite(Number(duree)) || Number(duree) <= 0) {
+      return res.status(400).json({ message: "La durée est invalide." });
+    }
+
+    const result = await pool.query(
+      `UPDATE absences
+       SET date = $1, debut = $2, fin = $3, duree = $4
+       WHERE id = $5 AND classe = ANY($6::text[])
+       RETURNING id, date, debut, fin, classe, duree, code, nom, motif, justifiee`,
+      [date, debut, fin, Number(duree), id, allowedClasses]
+    );
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({ message: "Absence introuvable." });
+    }
+
+    res.json(result.rows[0]);
+  } catch (err) {
+    console.error("Absence update error:", err);
+    res.status(500).json({ message: "Erreur serveur lors de la modification." });
+  }
+});
+
+app.delete("/absences/:id", async (req, res) => {
+  try {
+    const id = Number(req.params.id);
+    const prof = String(req.query.prof || "").trim();
+    const allowedClasses = await getTeacherClasses(prof);
+
+    if (!Number.isInteger(id) || id < 1 || !allowedClasses) {
+      return res.status(400).json({ message: "Données de suppression invalides." });
+    }
+
+    const result = await pool.query(
+      "DELETE FROM absences WHERE id = $1 AND classe = ANY($2::text[]) RETURNING id",
+      [id, allowedClasses]
+    );
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({ message: "Absence introuvable." });
+    }
+
+    res.json({ message: "Absence supprimée avec succès." });
+  } catch (err) {
+    console.error("Absence delete error:", err);
+    res.status(500).json({ message: "Erreur serveur lors de la suppression." });
   }
 });
 
