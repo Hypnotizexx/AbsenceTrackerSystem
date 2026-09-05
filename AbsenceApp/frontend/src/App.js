@@ -24,7 +24,7 @@ export default function App() {
   }, [user]);
 
   useEffect(() => {
-    document.title = "Absence Tracker";
+    document.title = "Gestion des absences";
     ["icon", "apple-touch-icon"].forEach((rel) => {
       let link = document.querySelector(`link[rel="${rel}"]`);
       if (!link) {

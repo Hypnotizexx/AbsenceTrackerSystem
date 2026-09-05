@@ -1,6 +1,6 @@
 {
-  "short_name": "Absence Tracker",
-  "name": "Absence Tracker",
+  "short_name": "Absences",
+  "name": "Gestion des absences",
   "start_url": ".",
   "display": "standalone",
   "theme_color": "#000000",
