@@ -73,6 +73,7 @@ RestartSec=5
 Environment=NODE_ENV=production
 Environment=PORT=5000
 Environment=HOST=127.0.0.1
+EnvironmentFile=-/etc/attendance-app/backend.env
 # PostgreSQL connection values for the local database:
 # Environment=PGHOST=localhost
 # Environment=PGPORT=5432
@@ -98,6 +99,17 @@ sudo systemctl start attendance-backend
 sudo systemctl status attendance-backend
 ```
 
+Create `/etc/attendance-app/backend.env` with permissions restricted to the service user. Keep the session secret stable across restarts:
+
+```env
+SESSION_SECRET=replace-with-a-long-random-value
+PGHOST=localhost
+PGPORT=5432
+PGUSER=postgres
+PGDATABASE=data
+PGPASSWORD=replace-with-your-database-password
+```
+
 ---
 
 ## 6) Configure Nginx to serve frontend
@@ -119,6 +131,14 @@ server {
 
     # Proxy backend API routes
     location /login/ {
+        proxy_pass http://127.0.0.1:5000;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
+
+    location = /logout {
         proxy_pass http://127.0.0.1:5000;
         proxy_set_header Host $host;
         proxy_set_header X-Real-IP $remote_addr;

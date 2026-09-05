@@ -4,6 +4,7 @@ import { useNavigate } from "react-router-dom";
 import { FaSignOutAlt } from "react-icons/fa";
 import "./teacher.css";
 import TeacherMark from "./TeacherMark";
+import API_BASE_URL from "./config";
 
 function TeacherDashboard({ user, setSelectedClass }) {
   const navigate = useNavigate();
@@ -19,6 +20,7 @@ function TeacherDashboard({ user, setSelectedClass }) {
 
   const handleLogout = () => {
     // Clear the persisted session and return to the public home page.
+    fetch(`${API_BASE_URL}/logout`, { method: "POST", credentials: "include" }).catch(() => {});
     localStorage.removeItem("user");
     window.location.href = "/";
   };

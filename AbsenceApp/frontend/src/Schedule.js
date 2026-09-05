@@ -56,8 +56,8 @@ export default function Schedule({ user, selectedClass }) {
     params.set("classe", selectedClass);
 
     Promise.all([
-      fetch(`${API_BASE_URL}/students/${encodeURIComponent(selectedClass)}?prof=${encodeURIComponent(user?.nom || "")}`),
-      fetch(`${API_BASE_URL}/absences?${params}`),
+      fetch(`${API_BASE_URL}/students/${encodeURIComponent(selectedClass)}`, { credentials: "include" }),
+      fetch(`${API_BASE_URL}/absences?${params}`, { credentials: "include" }),
     ])
       .then(async ([studentsRes, absencesRes]) => {
         if (!studentsRes.ok) throw new Error("Impossible de charger les élèves");
@@ -85,10 +85,9 @@ export default function Schedule({ user, selectedClass }) {
   const refreshSavedAbsences = async () => {
     // Refresh the saved list after create or edit operations.
     const params = new URLSearchParams({
-      prof: user?.nom || "",
       classe: selectedClass,
     });
-    const res = await fetch(`${API_BASE_URL}/absences?${params}`);
+    const res = await fetch(`${API_BASE_URL}/absences?${params}`, { credentials: "include" });
     const data = await res.json().catch(() => []);
     if (!res.ok) throw new Error(data.message || "Impossible de charger les absences");
     setSavedAbsences(Array.isArray(data) ? data : []);
@@ -119,8 +118,9 @@ export default function Schedule({ user, selectedClass }) {
       setError("");
       const res = await fetch(`${API_BASE_URL}/absences/${editingAbsence}`, {
         method: "PATCH",
+        credentials: "include",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ ...absenceForm, prof: user?.nom }),
+        body: JSON.stringify(absenceForm),
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(data.message || "Erreur lors de la modification.");
@@ -140,8 +140,8 @@ export default function Schedule({ user, selectedClass }) {
     if (!window.confirm("Supprimer cette absence ?")) return;
     try {
       setError("");
-      const params = new URLSearchParams({ prof: user?.nom || "" });
-      const res = await fetch(`${API_BASE_URL}/absences/${id}?${params}`, { method: "DELETE" });
+      const params = new URLSearchParams();
+      const res = await fetch(`${API_BASE_URL}/absences/${id}?${params}`, { method: "DELETE", credentials: "include" });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(data.message || "Erreur lors de la suppression.");
       setSavedAbsences((prev) => prev.filter((absence) => absence.id !== id));
@@ -206,10 +206,10 @@ export default function Schedule({ user, selectedClass }) {
       
       const res = await fetch(`${API_BASE_URL}/absences`, {
         method: "POST",
+        credentials: "include",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           classe: selectedClass,
-          prof: user?.nom,
           sessions,
           absents,
         }),

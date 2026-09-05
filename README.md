@@ -51,6 +51,7 @@ export PGPORT=5432
 export PGUSER=postgres
 export PGDATABASE=data
 export PGPASSWORD='your-database-password'
+export SESSION_SECRET='a-long-random-local-secret'
 ```
 
 ## Production With Nginx

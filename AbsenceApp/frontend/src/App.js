@@ -11,7 +11,13 @@ export default function App() {
   // Restore the logged-in teacher so a page refresh does not lose the session.
   const [user, setUser] = useState(() => {
     const saved = localStorage.getItem("user");
-    return saved ? JSON.parse(saved) : null;
+    if (!saved) return null;
+    try {
+      return JSON.parse(saved);
+    } catch (_err) {
+      localStorage.removeItem("user");
+      return null;
+    }
   });
 
   // The selected class is passed from the dashboard to the schedule page.

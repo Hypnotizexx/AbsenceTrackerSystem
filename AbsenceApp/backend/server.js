@@ -2,13 +2,28 @@
 const express = require("express");
 const cors = require("cors");
 const bodyParser = require("body-parser");
+const crypto = require("crypto");
 const { Pool } = require("pg");
 
 const app = express();
 
-// Global middleware enables cross-origin frontend requests and JSON request bodies.
-app.use(cors());
-app.use(bodyParser.json());
+// Allow the local development frontend on the same host and keep cookies usable across ports.
+app.use(cors({
+  origin(origin, callback) {
+    if (!origin) return callback(null, true);
+    try {
+      const parsed = new URL(origin);
+      const isPrivateAddress = /^(10\.|192\.168\.|172\.(1[6-9]|2\d|3[0-1])\.)/.test(parsed.hostname);
+      const isLocalFrontend = parsed.protocol === "http:" && parsed.port === "3000" &&
+        (parsed.hostname === "localhost" || parsed.hostname === "127.0.0.1" || isPrivateAddress);
+      callback(null, isLocalFrontend);
+    } catch (_err) {
+      callback(null, false);
+    }
+  },
+  credentials: true,
+}));
+app.use(bodyParser.json({ limit: "100kb" }));
 
 // Local PostgreSQL connection. Configure PG* values through the server environment.
 const pool = new Pool({
@@ -18,6 +33,49 @@ const pool = new Pool({
   password: process.env.PGPASSWORD || "dataB$#^&",
   port: Number(process.env.PGPORT) || 5432,
 });
+
+const SESSION_COOKIE = "absence_session";
+const SESSION_SECRET = process.env.SESSION_SECRET || crypto.randomBytes(32).toString("hex");
+const SESSION_MAX_AGE = 8 * 60 * 60 * 1000;
+
+function signSession(teacherName) {
+  const payload = Buffer.from(JSON.stringify({
+    nom: teacherName,
+    exp: Date.now() + SESSION_MAX_AGE,
+  })).toString("base64url");
+  const signature = crypto.createHmac("sha256", SESSION_SECRET).update(payload).digest("base64url");
+  return `${payload}.${signature}`;
+}
+
+function getCookie(req, name) {
+  const cookies = String(req.headers.cookie || "").split(";");
+  const entry = cookies.find((cookie) => cookie.trim().startsWith(`${name}=`));
+  return entry ? decodeURIComponent(entry.trim().slice(name.length + 1)) : "";
+}
+
+function readSession(req) {
+  const [payload, signature] = getCookie(req, SESSION_COOKIE).split(".");
+  if (!payload || !signature) return null;
+  const expected = crypto.createHmac("sha256", SESSION_SECRET).update(payload).digest("base64url");
+  const actualBuffer = Buffer.from(signature);
+  const expectedBuffer = Buffer.from(expected);
+  if (actualBuffer.length !== expectedBuffer.length || !crypto.timingSafeEqual(actualBuffer, expectedBuffer)) return null;
+  try {
+    const session = JSON.parse(Buffer.from(payload, "base64url").toString("utf8"));
+    return session.exp > Date.now() && session.nom ? session : null;
+  } catch (_err) {
+    return null;
+  }
+}
+
+async function requireTeacher(req, res, next) {
+  const session = readSession(req);
+  if (!session) return res.status(401).json({ message: "Session expirée. Veuillez vous reconnecter." });
+  const classes = await getTeacherClasses(session.nom);
+  if (!classes) return res.status(401).json({ message: "Session invalide." });
+  req.teacher = { nom: session.nom, classes };
+  next();
+}
 
 const MOROCCO_TIME_ZONE = "Africa/Casablanca";
 
@@ -89,6 +147,7 @@ app.post("/login/prof", async (req, res) => {
     const prof = r.rows[0];
     const classes = parseClasses(prof.classes);
 
+    res.setHeader("Set-Cookie", `${SESSION_COOKIE}=${encodeURIComponent(signSession(prof.nom))}; HttpOnly; SameSite=Lax; Path=/; Max-Age=${SESSION_MAX_AGE / 1000}`);
     res.json({ user: { nom: prof.nom, role: "prof", classes } });
   } catch (err) {
     console.error("Login error:", err);
@@ -96,27 +155,21 @@ app.post("/login/prof", async (req, res) => {
   }
 });
 
+app.post("/logout", (_req, res) => {
+  res.setHeader("Set-Cookie", `${SESSION_COOKIE}=; HttpOnly; SameSite=Lax; Path=/; Max-Age=0`);
+  res.json({ message: "Déconnexion réussie." });
+});
+
 // Student lookup: returns only students from a class the teacher may access.
-app.get("/students/:classe", async (req, res) => {
+app.get("/students/:classe", requireTeacher, async (req, res) => {
   try {
     const classe = decodeURIComponent(req.params.classe).trim();
     if (!classe) {
       return res.status(400).json({ message: "Classe manquante" });
     }
 
-    const prof = String(req.query.prof || "").trim();
-    if (prof) {
-      const teacher = await pool.query(
-        "SELECT classes FROM encadrants WHERE LOWER(nom) = LOWER($1)",
-        [prof]
-      );
-      if (teacher.rows.length === 0) {
-        return res.status(403).json({ message: "Professeur inconnu" });
-      }
-      const allowedClasses = parseClasses(teacher.rows[0].classes);
-      if (!allowedClasses.includes(classe)) {
-        return res.status(403).json({ message: "Classe non autorisée pour ce professeur" });
-      }
+    if (!req.teacher.classes.includes(classe)) {
+      return res.status(403).json({ message: "Classe non autorisée pour ce professeur" });
     }
 
     const r = await pool.query(
@@ -145,7 +198,7 @@ function normalizeAbsencePayload(raw) {
     return { valid: false, message: "La classe est obligatoire." };
   }
 
-  if (sessions.length === 0) {
+  if (sessions.length === 0 || sessions.length > 20) {
     return { valid: false, message: "Sélectionnez au moins un créneau." };
   }
 
@@ -156,7 +209,7 @@ function normalizeAbsencePayload(raw) {
     }))
     .filter((student) => student.code && student.nom);
 
-  if (normalizedStudents.length === 0) {
+  if (normalizedStudents.length === 0 || normalizedStudents.length > 500) {
     return { valid: false, message: "Sélectionnez au moins un élève absent." };
   }
 
@@ -170,7 +223,8 @@ function normalizeAbsencePayload(raw) {
       fin: String(session?.fin || "").trim(),
       duree: Number(session?.duree ?? 2),
     }))
-    .filter((session) => session.debut && session.fin && Number.isFinite(session.duree) && session.duree > 0);
+    .filter((session) => isValidTime(session.debut) && isValidTime(session.fin) && session.debut < session.fin &&
+      Number.isInteger(session.duree) && session.duree > 0 && session.duree <= 24);
 
   if (validSessions.length === 0) {
     return { valid: false, message: "Les créneaux sélectionnés sont invalides." };
@@ -184,7 +238,7 @@ function normalizeAbsencePayload(raw) {
   };
 }
 
-app.post("/absences", async (req, res) => {
+app.post("/absences", requireTeacher, async (req, res) => {
   try {
     const payload = normalizeAbsencePayload(req.body);
     if (!payload.valid) {
@@ -192,14 +246,20 @@ app.post("/absences", async (req, res) => {
     }
 
     const { classe, sessions, absents } = payload;
-    const prof = String(req.body.prof || "").trim();
-    const allowedClasses = await getTeacherClasses(prof);
-    if (!prof || !allowedClasses) {
-      return res.status(403).json({ message: "Professeur inconnu" });
-    }
+    const allowedClasses = req.teacher.classes;
     if (!allowedClasses.includes(classe)) {
       return res.status(403).json({ message: "Classe non autorisée pour ce professeur" });
     }
+    const studentCodes = absents.map((student) => student.code);
+    const studentsResult = await pool.query(
+      "SELECT code, nom FROM eleves WHERE TRIM(classe) = $1 AND code = ANY($2::text[])",
+      [classe, studentCodes]
+    );
+    if (studentsResult.rows.length !== studentCodes.length) {
+      return res.status(400).json({ message: "Un ou plusieurs élèves ne correspondent pas à cette classe." });
+    }
+    const studentsByCode = new Map(studentsResult.rows.map((student) => [student.code, student.nom]));
+    const canonicalAbsents = absents.map((student) => ({ code: student.code, nom: studentsByCode.get(student.code) }));
     // The server is the source of truth for the absence date.
     const date = getTodayLocal();
     const client = await pool.connect();
@@ -210,7 +270,7 @@ app.post("/absences", async (req, res) => {
       let insertedCount = 0;
 
       for (const s of sessions) {
-        for (const a of absents) {
+        for (const a of canonicalAbsents) {
           const existing = await client.query(
             `SELECT 1
              FROM absences
@@ -247,7 +307,7 @@ app.post("/absences", async (req, res) => {
       return res.status(201).json({
         message: "Absences enregistrées avec succès !",
         insertedCount,
-        skippedCount: absents.length * sessions.length - insertedCount,
+        skippedCount: canonicalAbsents.length * sessions.length - insertedCount,
       });
     } catch (err) {
       await client.query("ROLLBACK");
@@ -262,15 +322,10 @@ app.post("/absences", async (req, res) => {
 });
 
 // Absence management: list today's records, edit a record, or delete a record.
-app.get("/absences", async (req, res) => {
+app.get("/absences", requireTeacher, async (req, res) => {
   try {
-    const prof = String(req.query.prof || "").trim();
     const classe = String(req.query.classe || "").trim();
-    const allowedClasses = await getTeacherClasses(prof);
-
-    if (!prof || !allowedClasses) {
-      return res.status(403).json({ message: "Professeur inconnu" });
-    }
+    const allowedClasses = req.teacher.classes;
     if (classe && !allowedClasses.includes(classe)) {
       return res.status(403).json({ message: "Classe non autorisée pour ce professeur" });
     }
@@ -295,20 +350,19 @@ app.get("/absences", async (req, res) => {
   }
 });
 
-app.patch("/absences/:id", async (req, res) => {
+app.patch("/absences/:id", requireTeacher, async (req, res) => {
   try {
     const id = Number(req.params.id);
-    const prof = String(req.body.prof || "").trim();
     const { date, debut, fin, duree } = req.body;
-    const allowedClasses = await getTeacherClasses(prof);
+    const allowedClasses = req.teacher.classes;
 
     if (!Number.isInteger(id) || id < 1 || !allowedClasses) {
       return res.status(400).json({ message: "Données de modification invalides." });
     }
-    if (!isValidDate(date) || !isValidTime(debut) || !isValidTime(fin)) {
+    if (!isValidDate(date) || !isValidTime(debut) || !isValidTime(fin) || debut >= fin) {
       return res.status(400).json({ message: "La date ou les horaires sont invalides." });
     }
-    if (!Number.isFinite(Number(duree)) || Number(duree) <= 0) {
+    if (!Number.isInteger(Number(duree)) || Number(duree) <= 0 || Number(duree) > 24) {
       return res.status(400).json({ message: "La durée est invalide." });
     }
 
@@ -331,11 +385,10 @@ app.patch("/absences/:id", async (req, res) => {
   }
 });
 
-app.delete("/absences/:id", async (req, res) => {
+app.delete("/absences/:id", requireTeacher, async (req, res) => {
   try {
     const id = Number(req.params.id);
-    const prof = String(req.query.prof || "").trim();
-    const allowedClasses = await getTeacherClasses(prof);
+    const allowedClasses = req.teacher.classes;
 
     if (!Number.isInteger(id) || id < 1 || !allowedClasses) {
       return res.status(400).json({ message: "Données de suppression invalides." });
