@@ -29,6 +29,20 @@ npm start
 
 Open `http://localhost:3000`. The development frontend uses the backend on port `5000`.
 
+To use the development app from another device on the same local network, find the server's LAN address with `hostname -I`, then start both services so they listen on the network:
+
+```bash
+# Terminal 1: backend
+cd AbsenceApp/backend
+HOST=0.0.0.0 npm start
+
+# Terminal 2: frontend
+cd AbsenceApp/frontend
+HOST=0.0.0.0 npm start
+```
+
+Open `http://SERVER_LAN_IP:3000` on the other device. The frontend automatically sends API requests to `http://SERVER_LAN_IP:5000`. Allow ports `3000` and `5000` in the server firewall only on a trusted local network. For the Nginx setup, use `http://SERVER_LAN_IP` and keep port `5000` private.
+
 Set PostgreSQL connection values through environment variables before starting the backend:
 
 ```bash
@@ -70,4 +84,4 @@ Nginx does not need to be rebuilt. Production frontend source changes require `n
 
 ## Security
 
-Use HTTPS outside a trusted local network. Keep PostgreSQL credentials and other secrets out of Git. Keep the backend bound to localhost behind Nginx. Server-side authentication and password hashing should be added before exposing the application to an untrusted network.
+Use HTTPS outside a trusted local network. Keep PostgreSQL credentials and other secrets out of Git. Keep the backend bound to localhost behind Nginx. The development server may listen on the LAN only for trusted local use. Server-side authentication and password hashing should be added before exposing the application to an untrusted network.
