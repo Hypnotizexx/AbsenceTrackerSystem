@@ -4,6 +4,7 @@ import { useNavigate } from "react-router-dom";
 import { FaArrowLeft, FaCheckCircle, FaTimesCircle, FaTrash, FaEye, FaEdit } from "react-icons/fa";
 import "./teacher.css"; 
 import API_BASE_URL from './config';  
+import TeacherMark from "./TeacherMark";
 
 function calendarDate(value) {
   // Database DATE values are calendar strings; never pass them through Date/UTC conversion.
@@ -243,6 +244,7 @@ export default function Schedule({ user, selectedClass }) {
           Retour
         </button>
 
+        <TeacherMark />
         <h2 className="title">Enregistrement des absences</h2>
         <p className="subtitle">Classe : <strong>{selectedClass}</strong></p>
 
@@ -410,9 +412,9 @@ export default function Schedule({ user, selectedClass }) {
                           <strong>{absence.nom}</strong>
                           <small>{absence.code}</small>
                         </td>
-                        <td>{calendarDate(absence.date)}</td>
-                        <td>{String(absence.debut).slice(0, 5)} - {String(absence.fin).slice(0, 5)}</td>
-                        <td className="absence-actions">
+                        <td data-label="Date">{calendarDate(absence.date)}</td>
+                        <td data-label="Horaire">{String(absence.debut).slice(0, 5)} - {String(absence.fin).slice(0, 5)}</td>
+                        <td data-label="Actions" className="absence-actions">
                           <button className="icon-action edit-action" onClick={() => startEditingAbsence(absence)} title="Modifier cette absence">
                             <FaEdit />
                             Modifier

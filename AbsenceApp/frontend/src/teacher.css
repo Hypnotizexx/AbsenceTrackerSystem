@@ -2,7 +2,7 @@
 .page-container {
   display: flex;
   justify-content: center;
-  padding: 40px 20px;
+  padding: 32px 20px;
   min-height: 100vh;
   background: #f8f9fa;
   box-sizing: border-box;
@@ -12,16 +12,17 @@
 .dashboard-card {
   width: 100%;
   max-width: 1100px;
-  padding: 50px;
+  padding: 40px;
   background: white;
-  border-radius: 16px;
-  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.06);
+  border: 1px solid #e8edf2;
+  border-radius: 12px;
+  box-shadow: 0 2px 12px rgba(15, 23, 42, 0.04);
   box-sizing: border-box;
   transition: box-shadow 0.3s ease;
 }
 
 .dashboard-card:hover {
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+  box-shadow: 0 4px 20px rgba(15, 23, 42, 0.06);
 }
 
 /* ===== Back Button ===== */
@@ -31,6 +32,45 @@
   justify-content: space-between;
   gap: 12px;
   margin-bottom: 24px;
+}
+
+.dashboard-branding {
+  display: inline-flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.teacher-mark {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 56px;
+  height: 56px;
+  border-radius: 14px;
+  background: #eaf2ff;
+  color: #3569a8;
+  font-size: 27px;
+  flex-shrink: 0;
+}
+
+.dashboard-branding .teacher-mark {
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  font-size: 17px;
+}
+
+.dashboard-card > .brand-mark {
+  display: block;
+  width: 56px;
+  height: 56px;
+  object-fit: contain;
+  margin: 0 auto 16px;
+}
+
+.dashboard-card > .teacher-mark {
+  display: flex;
+  margin: 0 auto 16px;
 }
 
 .dashboard-badge {
@@ -152,6 +192,10 @@
   display: flex;
   flex-direction: column;
   gap: 12px;
+  width: 100%;
+  max-width: 560px;
+  margin-right: auto;
+  margin-left: auto;
   margin-bottom: 40px;
 }
 
@@ -563,8 +607,21 @@
 
 /* ===== Responsive Design ===== */
 @media (max-width: 768px) {
+  .page-container {
+    padding: 16px 12px;
+  }
+
   .dashboard-card {
-    padding: 30px 24px;
+    padding: 24px 16px;
+    border-radius: 10px;
+  }
+
+  .dashboard-topbar {
+    align-items: flex-start;
+  }
+
+  .dashboard-branding {
+    gap: 8px;
   }
 
   .title {
@@ -572,7 +629,8 @@
   }
 
   .blocs-container {
-    grid-template-columns: repeat(auto-fit, minmax(110px, 1fr));
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
   }
 
   .bloc-label {
@@ -590,10 +648,123 @@
   }
 
   .saved-absences-table {
-    min-width: 680px;
+    min-width: 0;
+  }
+
+  .saved-absences-table thead {
+    display: none;
+  }
+
+  .saved-absences-table,
+  .saved-absences-table tbody,
+  .saved-absences-table tr,
+  .saved-absences-table td {
+    display: block;
+    width: 100%;
+  }
+
+  .saved-absences-table tbody tr:not(.edit-row) {
+    padding: 12px;
+    border-bottom: 1px solid #e2e8f0;
+  }
+
+  .saved-absences-table tbody tr:not(.edit-row):last-child {
+    border-bottom: 0;
+  }
+
+  .saved-absences-table tbody tr:not(.edit-row) td {
+    display: grid;
+    grid-template-columns: 88px minmax(0, 1fr);
+    gap: 10px;
+    align-items: center;
+    padding: 6px 0;
+    text-align: left !important;
+  }
+
+  .saved-absences-table tbody tr:not(.edit-row) td:first-child {
+    display: block;
+    padding-bottom: 10px;
+  }
+
+  .saved-absences-table tbody tr:not(.edit-row) td:not(:first-child)::before {
+    content: attr(data-label);
+    color: #64748b;
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+  }
+
+  .saved-absences-table .absence-actions {
+    display: flex !important;
+    flex-wrap: wrap;
+    gap: 8px;
+    padding-top: 10px !important;
+  }
+
+  .saved-absences-table .absence-actions::before {
+    width: 100%;
+  }
+
+  .saved-absences-table .icon-action {
+    flex: 1 1 120px;
+  }
+
+  .saved-absences-table .edit-row td {
+    padding: 12px;
   }
 
   .absence-edit-form {
     align-items: stretch;
+    flex-direction: column;
+  }
+
+  .absence-edit-form label,
+  .absence-edit-form input,
+  .edit-form-actions,
+  .edit-form-actions button {
+    width: 100%;
+  }
+
+  .edit-form-actions {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .schedule-tabs {
+    flex-direction: column;
+    margin-bottom: 24px;
+  }
+
+  .schedule-tab {
+    justify-content: space-between;
+    text-align: left;
+  }
+
+  .absence-actions {
+    white-space: normal;
+  }
+}
+
+@media (max-width: 420px) {
+  .title {
+    font-size: 20px;
+  }
+
+  .subtitle {
+    margin-bottom: 24px;
+  }
+
+  .bloc-label {
+    min-height: 50px;
+    padding: 9px 10px;
+  }
+
+  .teacher-table th,
+  .teacher-table td {
+    padding: 10px 8px;
+  }
+
+  .save-btn {
+    width: 100%;
   }
 }

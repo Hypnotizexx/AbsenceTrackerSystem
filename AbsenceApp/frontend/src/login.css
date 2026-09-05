@@ -13,12 +13,22 @@
 .login-card {
   width: 100%;
   max-width: 400px;
+  margin: 0 auto;
   padding: 48px 36px;
   background: white;
   border-radius: 12px;
   box-shadow: 0 2px 12px rgba(0, 0, 0, 0.08);
   box-sizing: border-box;
   transition: all 0.3s ease;
+}
+
+.login-card .teacher-mark {
+  display: flex;
+  width: 60px;
+  height: 60px;
+  margin-right: auto;
+  margin-left: auto;
+  margin-bottom: 20px;
 }
 
 .login-card:hover {

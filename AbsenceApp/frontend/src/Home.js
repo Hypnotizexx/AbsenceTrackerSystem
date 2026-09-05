@@ -2,6 +2,7 @@ import React from "react";
 import { useNavigate } from "react-router-dom";
 import { FaChalkboardTeacher, FaArrowRight } from "react-icons/fa";
 import "./home.css";
+import BrandMark from "./BrandMark";
 
 export default function Home() {
   const navigate = useNavigate();
@@ -10,6 +11,7 @@ export default function Home() {
     <div className="page-container home-page">
       <div className="home-card">
         <header className="home-header">
+          <BrandMark />
           <span className="home-badge">Espace enseignant</span>
           <h1 className="title">Gestion des Absences</h1>
           <p className="subtitle">Plateforme sécurisée de suivi des présences en classe</p>

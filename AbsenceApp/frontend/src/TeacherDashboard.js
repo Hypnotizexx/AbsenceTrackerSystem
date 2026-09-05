@@ -3,6 +3,7 @@ import React from "react";
 import { useNavigate } from "react-router-dom";
 import { FaSignOutAlt } from "react-icons/fa";
 import "./teacher.css";
+import TeacherMark from "./TeacherMark";
 
 function TeacherDashboard({ user, setSelectedClass }) {
   const navigate = useNavigate();
@@ -26,7 +27,10 @@ function TeacherDashboard({ user, setSelectedClass }) {
     <div className="page-container">
       <div className="dashboard-card">
         <div className="dashboard-topbar">
-          <span className="dashboard-badge">Espace enseignant</span>
+          <div className="dashboard-branding">
+            <TeacherMark />
+            <span className="dashboard-badge">Espace enseignant</span>
+          </div>
           <button 
             className="back-btn" 
             onClick={handleLogout}

@@ -5,6 +5,7 @@ import Home from "./Home";
 import Login from "./Login";
 import TeacherDashboard from "./TeacherDashboard";
 import Schedule from "./Schedule";
+import icon from "./LOGO.png";
 
 export default function App() {
   // Restore the logged-in teacher so a page refresh does not lose the session.
@@ -21,6 +22,19 @@ export default function App() {
     if (user) localStorage.setItem("user", JSON.stringify(user));
     else localStorage.removeItem("user");
   }, [user]);
+
+  useEffect(() => {
+    document.title = "Absence Tracker";
+    ["icon", "apple-touch-icon"].forEach((rel) => {
+      let link = document.querySelector(`link[rel="${rel}"]`);
+      if (!link) {
+        link = document.createElement("link");
+        link.rel = rel;
+        document.head.appendChild(link);
+      }
+      link.href = icon;
+    });
+  }, []);
 
   return (
     <Router>

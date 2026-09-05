@@ -364,7 +364,7 @@ app.delete("/absences/:id", async (req, res) => {
 });
 
 const PORT = Number(process.env.PORT) || 5000;
-const HOST = process.env.HOST || "0.0.0.0";
+const HOST = process.env.HOST || "127.0.0.1";
 
 // Start only after confirming that PostgreSQL is reachable.
 async function startServer() {

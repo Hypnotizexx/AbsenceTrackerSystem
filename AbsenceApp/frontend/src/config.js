@@ -1,7 +1,9 @@
 
-// Frontend API base URL: use the deployment override or the backend on the current host.
+// Production is served by Nginx, so API calls stay on the same origin.
 const API_BASE_URL =
   process.env.REACT_APP_API_BASE_URL ||
-  `http://${window.location.hostname || "localhost"}:5000`;
+  (process.env.NODE_ENV === "production"
+    ? window.location.origin
+    : `http://${window.location.hostname || "localhost"}:5000`);
 
 export default API_BASE_URL;

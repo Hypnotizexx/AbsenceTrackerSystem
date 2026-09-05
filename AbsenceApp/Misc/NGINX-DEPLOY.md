@@ -1,6 +1,6 @@
-# Absence App Deployment (Nginx Only)
+# Absence App Deployment (Nginx)
 
-This guide configures the app to be hosted using Nginx as a web server and reverse proxy. Users can access the app via the server's IP address or domain name (e.g., `http://<server_ip>`), and the frontend will call the backend API on `http://<server_ip>:5000`.
+This guide configures the app to be hosted using Nginx as a web server and reverse proxy. Users access the app through Nginx at the server's IP address or domain name. The browser calls the API through the same origin, so the backend port is not exposed publicly.
 
 Replace `<server_ip>` with your server's actual IP address (e.g., `192.168.1.100`) or domain name throughout this guide.
 
@@ -44,15 +44,7 @@ npm install
 
 ## 4) Frontend API base URL
 
-This project is configured to default to `http://<server_ip>:5000`.
-
-To override (if needed):
-
-Create `frontend/.env.production`:
-
-```env
-REACT_APP_API_BASE_URL=http://<server_ip>:5000
-```
+In production, the frontend automatically uses the current Nginx origin for API requests. Do not set the API URL to port `5000` for the Nginx deployment.
 
 Then build:
 
@@ -80,7 +72,7 @@ Restart=always
 RestartSec=5
 Environment=NODE_ENV=production
 Environment=PORT=5000
-Environment=HOST=0.0.0.0
+Environment=HOST=127.0.0.1
 Environment=PUBLIC_HOST=<server_ip>
 
 # Optional DB overrides if you later switch from hardcoded values in server.js:
@@ -152,14 +144,6 @@ server {
         proxy_set_header X-Forwarded-Proto $scheme;
     }
 
-    # Kept for extension endpoint already in backend
-    location /api/absences {
-        proxy_pass http://127.0.0.1:5000;
-        proxy_set_header Host $host;
-        proxy_set_header X-Real-IP $remote_addr;
-        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-        proxy_set_header X-Forwarded-Proto $scheme;
-    }
 }
 ```
 
@@ -175,12 +159,10 @@ sudo systemctl restart nginx
 
 ## 7) Firewall
 
-Open HTTP (and backend direct port only if you need direct access to `:5000`):
+Open only the Nginx port:
 
 ```bash
 sudo ufw allow 80/tcp
-# Optional:
-# sudo ufw allow 5000/tcp
 ```
 
 ---
@@ -213,5 +195,5 @@ sudo systemctl restart nginx
 ## Notes
 
 - Frontend is static and served by Nginx on port 80.
-- Backend runs as service on port `5000`.
+- Backend runs as a localhost-only service on port `5000`; Nginx is the public entry point.
 - For HTTPS, configure SSL certificates (e.g., via Let's Encrypt).

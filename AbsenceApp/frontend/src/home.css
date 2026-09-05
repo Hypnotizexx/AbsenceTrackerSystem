@@ -28,6 +28,14 @@
   margin-bottom: 48px;
 }
 
+.brand-mark {
+  display: block;
+  width: 64px;
+  height: 64px;
+  object-fit: contain;
+  margin: 0 auto 18px;
+}
+
 .home-badge {
   display: inline-flex;
   align-items: center;

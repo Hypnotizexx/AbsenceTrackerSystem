@@ -4,6 +4,7 @@ import { useNavigate } from "react-router-dom";
 import { FaUser, FaLock, FaExclamationCircle } from "react-icons/fa";
 import "./login.css";
 import API_BASE_URL from './config'; 
+import TeacherMark from "./TeacherMark";
 
 export default function Login({ setUser }) {
   // Form fields and request state are kept local to the login screen.
@@ -49,6 +50,7 @@ export default function Login({ setUser }) {
   return (
     <div className="page-container">
       <div className="login-card">
+        <TeacherMark />
         <h2 className="title">Connexion</h2>
         <p className="subtitle">Accédez à votre portail enseignant</p>
 

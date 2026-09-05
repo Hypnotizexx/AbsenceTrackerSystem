@@ -1,70 +1,124 @@
-# Getting Started with Create React App
+# Absence Tracker
 
-This project was bootstrapped with [Create React App](https://github.com/facebook/create-react-app).
+Teacher-facing absence management app with a React frontend, Express API, and PostgreSQL database.
 
-## Available Scripts
+## Repository Layout
 
-In the project directory, you can run:
+```text
+AbsenceApp/
+├── backend/     Express API and PostgreSQL connection
+├── frontend/    React application served by Nginx
+└── Misc/        Nginx deployment guide and database notes
+```
 
-### `npm start`
+## Requirements
 
-Runs the app in the development mode.\
-Open [http://localhost:3000](http://localhost:3000) to view it in your browser.
+- Node.js and npm
+- PostgreSQL
+- Nginx for production deployment
 
-The page will reload when you make changes.\
-You may also see any lint errors in the console.
+## Clone From GitHub
 
-### `npm test`
+```bash
+git clone https://github.com/Hypnotizexx/AbsenceTrackerSystem.git
+cd AbsenceTrackerSystem/AbsenceApp
+```
 
-Launches the test runner in the interactive watch mode.\
-See the section about [running tests](https://facebook.github.io/create-react-app/docs/running-tests) for more information.
+For a private repository, authenticate with GitHub using SSH or GitHub CLI. Never put a password or access token in the clone URL.
 
-### `npm run build`
+## Local Development
 
-Builds the app for production to the `build` folder.\
-It correctly bundles React in production mode and optimizes the build for the best performance.
+Install dependencies once:
 
-The build is minified and the filenames include the hashes.\
-Your app is ready to be deployed!
+```bash
+cd frontend
+npm install
 
-See the section about [deployment](https://facebook.github.io/create-react-app/docs/deployment) for more information.
+cd ../backend
+npm install
+```
 
-### `npm run eject`
+Configure PostgreSQL through environment variables when possible:
 
-**Note: this is a one-way operation. Once you `eject`, you can't go back!**
+```bash
+export PGHOST=localhost
+export PGPORT=5432
+export PGUSER=postgres
+export PGDATABASE=data
+export PGPASSWORD='your-database-password'
+```
 
-If you aren't satisfied with the build tool and configuration choices, you can `eject` at any time. This command will remove the single build dependency from your project.
+Start the backend:
 
-Instead, it will copy all the configuration files and the transitive dependencies (webpack, Babel, ESLint, etc) right into your project so you have full control over them. All of the commands except `eject` will still work, but they will point to the copied scripts so you can tweak them. At this point you're on your own.
+```bash
+cd backend
+npm start
+```
 
-You don't have to ever use `eject`. The curated feature set is suitable for small and middle deployments, and you shouldn't feel obligated to use this feature. However we understand that this tool wouldn't be useful if you couldn't customize it when you are ready for it.
+In another terminal, start the React development server:
 
-## Learn More
+```bash
+cd frontend
+npm start
+```
 
-You can learn more in the [Create React App documentation](https://facebook.github.io/create-react-app/docs/getting-started).
+Open `http://localhost:3000`. Development API requests use port `5000`; production requests use the current Nginx origin.
 
-To learn React, check out the [React documentation](https://reactjs.org/).
+## Build For Nginx
 
-### Code Splitting
+Build the frontend on the server or in CI:
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/code-splitting](https://facebook.github.io/create-react-app/docs/code-splitting)
+```bash
+cd frontend
+npm install
+npm run build
+```
 
-### Analyzing the Bundle Size
+The generated `frontend/build` directory is the static site that Nginx serves. The backend should run separately as a systemd service and listen on `127.0.0.1:5000`.
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/analyzing-the-bundle-size](https://facebook.github.io/create-react-app/docs/analyzing-the-bundle-size)
+The complete Nginx and systemd configuration is in [Misc/NGINX-DEPLOY.md](../Misc/NGINX-DEPLOY.md).
 
-### Making a Progressive Web App
+## Updating A Deployed Server
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/making-a-progressive-web-app](https://facebook.github.io/create-react-app/docs/making-a-progressive-web-app)
+From the application directory:
 
-### Advanced Configuration
+```bash
+git pull origin main
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/advanced-configuration](https://facebook.github.io/create-react-app/docs/advanced-configuration)
+cd frontend
+npm install
+npm run build
 
-### Deployment
+cd ../backend
+npm install
+sudo systemctl restart attendance-backend
+sudo systemctl restart nginx
+```
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/deployment](https://facebook.github.io/create-react-app/docs/deployment)
+Do not expose port `5000` publicly. Nginx should be the public entry point.
 
-### `npm run build` fails to minify
+## Can I Edit Without Rebuilding?
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify](https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify)
+Yes, for development. Run `npm start` in `frontend`; React watches source files and reloads the browser automatically. This is suitable for a development machine, not for public production traffic.
+
+For the Nginx production deployment, the browser receives static files from `frontend/build`. Source changes do not appear there until `npm run build` is run and Nginx serves the updated files. Nginx itself does not need rebuilding; only the React bundle does.
+
+To avoid manual production builds, use CI/CD: push to GitHub, let GitHub Actions build the frontend, copy the build to the server, then restart the backend only when backend files changed. Keep the build and deployment steps in a controlled server or deployment pipeline rather than running a development server publicly.
+
+## Git Workflow
+
+```bash
+git status
+git add .
+git commit -m "Describe the change"
+git push origin main
+```
+
+Never commit `.env` files, database passwords, private keys, or GitHub tokens.
+
+## Security Notes
+
+- Use HTTPS when the app is accessed beyond a trusted local machine.
+- Keep PostgreSQL credentials in environment variables or a secret manager.
+- Keep the backend bound to `127.0.0.1` behind Nginx.
+- The current application still needs server-side authentication and password hashing before being exposed to an untrusted network.
