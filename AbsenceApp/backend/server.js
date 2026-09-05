@@ -10,20 +10,14 @@ const app = express();
 app.use(cors());
 app.use(bodyParser.json());
 
-// Database connection: hosted deployments use DATABASE_URL; local deployments use PG* variables.
-// Use DATABASE_URL for hosted databases or PG* variables for an existing local database.
-const pool = process.env.DATABASE_URL
-  ? new Pool({
-      connectionString: process.env.DATABASE_URL,
-      ssl: process.env.NODE_ENV === "production" ? { rejectUnauthorized: false } : false,
-    })
-  : new Pool({
-      user: process.env.PGUSER || "postgres",
-      host: process.env.PGHOST || "localhost",
-      database: process.env.PGDATABASE || "data",
-      password: process.env.PGPASSWORD || "dataB$#^&",
-      port: Number(process.env.PGPORT) || 5432,
-    });
+// Local PostgreSQL connection. Configure PG* values through the server environment.
+const pool = new Pool({
+  user: process.env.PGUSER || "postgres",
+  host: process.env.PGHOST || "localhost",
+  database: process.env.PGDATABASE || "data",
+  password: process.env.PGPASSWORD || "dataB$#^&",
+  port: Number(process.env.PGPORT) || 5432,
+});
 
 const MOROCCO_TIME_ZONE = "Africa/Casablanca";
 

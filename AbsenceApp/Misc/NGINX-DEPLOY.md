@@ -73,9 +73,7 @@ RestartSec=5
 Environment=NODE_ENV=production
 Environment=PORT=5000
 Environment=HOST=127.0.0.1
-Environment=PUBLIC_HOST=<server_ip>
-
-# Optional DB overrides if you later switch from hardcoded values in server.js:
+# PostgreSQL connection values for the local database:
 # Environment=PGHOST=localhost
 # Environment=PGPORT=5432
 # Environment=PGUSER=postgres
