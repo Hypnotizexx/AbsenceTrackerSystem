@@ -6,7 +6,6 @@ A teacher-facing absence management application with a React frontend, Express b
 
 - `AbsenceApp/frontend` - React application
 - `AbsenceApp/backend` - Express API and PostgreSQL connection
-- `AbsenceApp/Misc` - Database notes and other deployment material
 
 ## Quick Start
 
@@ -56,7 +55,7 @@ export SESSION_SECRET='a-long-random-local-secret'
 
 ## Secure Production Deployment
 
-These steps deploy the app behind Nginx, with the backend and database private. They assume teacher devices have fixed IP addresses. Replace every placeholder before running a command.
+These steps deploy the app behind Nginx, with the backend and database private. Teachers do not need fixed device IP addresses. Use a separate teacher Wi-Fi/VLAN or a VPN subnet, and replace `TEACHER_NETWORK_CIDR` with that network, for example `10.8.0.0/24` for a VPN.
 
 ### 1. Start fresh
 
@@ -176,7 +175,7 @@ SQL
 
 The `classes TEXT[]` column is intentional: the reference Python app sends a list of classes, while the Node backend can read PostgreSQL arrays and authorize teachers correctly. The `motif` values mean `5` maladie, `6` concours français, `7` autre, `8` grève des élèves, and `9` sanction.
 
-The `/home/ss/123/Gestionnaire-d-Absences-master` application reads these same tables directly. For the most secure deployment, run that extractor on the PostgreSQL server or through a private VPN so PostgreSQL can remain bound to localhost. If it must run from another fixed-IP computer, do not open PostgreSQL to the whole LAN: allow only that extractor IP in `pg_hba.conf` and the firewall, use a dedicated read/write database role, and enable PostgreSQL TLS.
+The `/home/ss/123/Gestionnaire-d-Absences-master` application reads these same tables directly. For the most secure deployment, run that extractor on the PostgreSQL server or through a private VPN so PostgreSQL can remain bound to localhost. If it runs from another computer, connect that computer to the private VPN and allow only the VPN subnet in `pg_hba.conf` and the firewall. Do not open PostgreSQL to the general LAN.
 
 Check the result before continuing:
 
@@ -272,9 +271,6 @@ server {
 	root /opt/attendance-app/AbsenceApp/frontend/build;
 	index index.html;
 
-	allow TEACHER_IP_1;
-	allow TEACHER_IP_2;
-	deny all;
 	limit_conn connection_limit 20;
 
 	location / {
@@ -306,7 +302,14 @@ server {
 }
 ```
 
-Replace `SERVER_IP_OR_DOMAIN`, `TEACHER_IP_1`, and `TEACHER_IP_2`. Add one `allow` line for every teacher device. Enable the site and remove the default site:
+Replace `SERVER_IP_OR_DOMAIN`. Do not add individual teacher IP addresses because they may change. If Nginx should be reachable only through a teacher VPN or VLAN, add these lines inside `server { ... }`, replacing the subnet:
+
+```nginx
+allow TEACHER_NETWORK_CIDR;
+deny all;
+```
+
+Do not use a general shared student/teacher Wi-Fi subnet here, because it would allow students on that Wi-Fi too. Enable the site and remove the default site:
 
 ```bash
 sudo ln -s /etc/nginx/sites-available/attendance-app /etc/nginx/sites-enabled/attendance-app
@@ -318,20 +321,18 @@ sudo systemctl reload nginx
 
 ### 8. Configure the firewall
 
-Allow web traffic only from the fixed teacher IPs. Add one pair for each teacher:
+Allow web traffic from the teacher VPN or teacher VLAN. This works with changing teacher device IPs because the network boundary is the subnet, not an individual device:
 
 ```bash
 sudo ufw default deny incoming
 sudo ufw default allow outgoing
-sudo ufw allow from TEACHER_IP_1 to any port 80 proto tcp
-sudo ufw allow from TEACHER_IP_1 to any port 443 proto tcp
-sudo ufw allow from TEACHER_IP_2 to any port 80 proto tcp
-sudo ufw allow from TEACHER_IP_2 to any port 443 proto tcp
+sudo ufw allow from TEACHER_NETWORK_CIDR to any port 80 proto tcp
+sudo ufw allow from TEACHER_NETWORK_CIDR to any port 443 proto tcp
 sudo ufw enable
 sudo ufw status verbose
 ```
 
-Never open ports `5000` or `5432` to the LAN. Verify the services are private:
+Replace `TEACHER_NETWORK_CIDR` with the teacher VPN/VLAN subnet. If teachers and students use the same Wi-Fi subnet, these rules cannot distinguish them; use a teacher VLAN, VPN, or separate access point first. Never open ports `5000` or `5432` to the LAN. Verify the services are private:
 
 ```bash
 sudo ss -ltnp | grep -E ':5000|:5432'

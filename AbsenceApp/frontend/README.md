@@ -7,8 +7,7 @@ Teacher-facing absence management app with a React frontend, Express API, and Po
 ```text
 AbsenceApp/
 ├── backend/     Express API and PostgreSQL connection
-├── frontend/    React application served by Nginx
-└── Misc/        Database notes and other deployment material
+└── frontend/    React application, frontend notes, and build output
 ```
 
 ## Requirements
