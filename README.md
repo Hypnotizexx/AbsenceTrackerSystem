@@ -101,13 +101,90 @@ npm install
 npm run build
 ```
 
-### 4. Prepare PostgreSQL and secrets
+### 4. Delete the old application database
 
-Create a dedicated database user and database. Use your own strong password:
+This deletes only the old database and role for this application. It permanently deletes their data. Never drop the PostgreSQL system databases `postgres`, `template0`, or `template1`.
+
+First list the databases and roles so you can identify the old application names:
+
+```bash
+sudo -u postgres psql -d postgres -c "\l"
+sudo -u postgres psql -d postgres -c "\du"
+```
+
+If the old application used different names, replace `OLD_DATABASE_NAME` and `OLD_DATABASE_USER` below. Do not use these commands for a database used by another application:
+
+```bash
+sudo -u postgres psql -d postgres -c "SELECT pg_terminate_backend(pid) FROM pg_stat_activity WHERE datname = 'OLD_DATABASE_NAME' AND pid <> pg_backend_pid();"
+sudo -u postgres dropdb --if-exists OLD_DATABASE_NAME
+sudo -u postgres dropuser --if-exists OLD_DATABASE_USER
+```
+
+For the deployment in this README, the fresh names are `absence_data` and `absence_app`. If an earlier installation used these names, reset them with:
+
+```bash
+sudo -u postgres psql -d postgres -c "SELECT pg_terminate_backend(pid) FROM pg_stat_activity WHERE datname = 'absence_data' AND pid <> pg_backend_pid();"
+sudo -u postgres dropdb --if-exists absence_data
+sudo -u postgres dropuser --if-exists absence_app
+```
+
+### 5. Create the compatible PostgreSQL database
+
+Create a dedicated role and database. Use a strong password when prompted:
 
 ```bash
 sudo -u postgres createuser --pwprompt absence_app
 sudo -u postgres createdb --owner=absence_app absence_data
+```
+
+Create the tables. This schema is compatible with the React/Node app and the `/home/ss/123/Gestionnaire-d-Absences-master` extractor:
+
+```bash
+sudo -u postgres psql -v ON_ERROR_STOP=1 -d absence_data <<'SQL'
+SET ROLE absence_app;
+
+CREATE TABLE absences (
+	id SERIAL PRIMARY KEY,
+	date DATE NOT NULL,
+	debut TIME NOT NULL,
+	fin TIME NOT NULL,
+	classe TEXT NOT NULL,
+	code TEXT NOT NULL,
+	nom TEXT NOT NULL,
+	duree INTEGER NOT NULL CHECK (duree >= 0),
+	motif INTEGER NOT NULL CHECK (motif IN (5, 6, 7, 8, 9)),
+	justifiee BOOLEAN NOT NULL DEFAULT FALSE,
+	CONSTRAINT absences_unique_record UNIQUE (date, code, debut, fin)
+);
+
+CREATE TABLE eleves (
+	code TEXT PRIMARY KEY,
+	nom TEXT NOT NULL,
+	classe TEXT NOT NULL
+);
+
+CREATE TABLE encadrants (
+	nom TEXT PRIMARY KEY,
+	mdp TEXT NOT NULL,
+	classes TEXT[] NOT NULL
+);
+
+CREATE INDEX absences_date_classe_idx ON absences (date, classe);
+CREATE INDEX eleves_classe_idx ON eleves (classe);
+SQL
+```
+
+The `classes TEXT[]` column is intentional: the reference Python app sends a list of classes, while the Node backend can read PostgreSQL arrays and authorize teachers correctly. The `motif` values mean `5` maladie, `6` concours français, `7` autre, `8` grève des élèves, and `9` sanction.
+
+The `/home/ss/123/Gestionnaire-d-Absences-master` application reads these same tables directly. For the most secure deployment, run that extractor on the PostgreSQL server or through a private VPN so PostgreSQL can remain bound to localhost. If it must run from another fixed-IP computer, do not open PostgreSQL to the whole LAN: allow only that extractor IP in `pg_hba.conf` and the firewall, use a dedicated read/write database role, and enable PostgreSQL TLS.
+
+Check the result before continuing:
+
+```bash
+sudo -u postgres psql -d absence_data -c "\dt"
+sudo -u postgres psql -d absence_data -c "\d absences"
+sudo -u postgres psql -d absence_data -c "\d eleves"
+sudo -u postgres psql -d absence_data -c "\d encadrants"
 ```
 
 Create the secret file:
@@ -140,7 +217,7 @@ sudo chmod 640 /etc/attendance-app/backend.env
 
 Replace `YOUR_LINUX_USER` with the Linux user that will run the backend. Do not commit this file.
 
-### 5. Create the systemd backend service
+### 6. Create the systemd backend service
 
 Create `/etc/systemd/system/attendance-backend.service`:
 
@@ -176,7 +253,7 @@ sudo systemctl enable --now attendance-backend
 sudo systemctl status attendance-backend
 ```
 
-### 6. Configure Nginx
+### 7. Configure Nginx
 
 Edit `/etc/nginx/nginx.conf`. Add these lines inside the existing `http { ... }` block:
 
@@ -239,7 +316,7 @@ sudo systemctl enable --now nginx
 sudo systemctl reload nginx
 ```
 
-### 7. Configure the firewall
+### 8. Configure the firewall
 
 Allow web traffic only from the fixed teacher IPs. Add one pair for each teacher:
 
@@ -262,7 +339,7 @@ sudo ss -ltnp | grep -E ':5000|:5432'
 
 Both should show `127.0.0.1`, not `0.0.0.0`.
 
-### 8. Use HTTPS and monitor
+### 9. Use HTTPS and monitor
 
 For access outside a trusted LAN, configure a TLS certificate and redirect HTTP to HTTPS. Check the services with:
 
