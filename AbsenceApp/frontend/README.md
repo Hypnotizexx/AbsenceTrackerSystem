@@ -8,7 +8,7 @@ Teacher-facing absence management app with a React frontend, Express API, and Po
 AbsenceApp/
 ├── backend/     Express API and PostgreSQL connection
 ├── frontend/    React application served by Nginx
-└── Misc/        Nginx deployment guide and database notes
+└── Misc/        Database notes and other deployment material
 ```
 
 ## Requirements
@@ -76,7 +76,7 @@ npm run build
 
 The generated `frontend/build` directory is the static site that Nginx serves. The backend should run separately as a systemd service and listen on `127.0.0.1:5000`.
 
-The complete Nginx and systemd configuration is in [Misc/NGINX-DEPLOY.md](../Misc/NGINX-DEPLOY.md).
+The complete secure production deployment is documented in the repository [README](../../README.md).
 
 ## Updating A Deployed Server
 

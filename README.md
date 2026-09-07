@@ -6,7 +6,7 @@ A teacher-facing absence management application with a React frontend, Express b
 
 - `AbsenceApp/frontend` - React application
 - `AbsenceApp/backend` - Express API and PostgreSQL connection
-- `AbsenceApp/Misc/NGINX-DEPLOY.md` - Nginx and systemd deployment guide
+- `AbsenceApp/Misc` - Database notes and other deployment material
 
 ## Quick Start
 
@@ -54,82 +54,131 @@ export PGPASSWORD='your-database-password'
 export SESSION_SECRET='a-long-random-local-secret'
 ```
 
-## Production With Nginx
+## Secure Production Deployment
 
-Build the React frontend and serve its `build` directory with Nginx:
+These steps deploy the app behind Nginx, with the backend and database private. They assume teacher devices have fixed IP addresses. Replace every placeholder before running a command.
+
+### 1. Start fresh
+
+Run these only if this server has an old deployment of this app. Do not remove the Nginx default site or other sites you still use.
 
 ```bash
-cd AbsenceApp/frontend
+sudo systemctl disable --now attendance-backend 2>/dev/null || true
+sudo rm -f /etc/systemd/system/attendance-backend.service
+sudo systemctl daemon-reload
+sudo rm -f /etc/nginx/sites-enabled/attendance-app
+sudo rm -f /etc/nginx/sites-available/attendance-app
+sudo rm -rf /etc/attendance-app
+```
+
+If the old application is stored at `/opt/attendance-app` and you no longer need it:
+
+```bash
+sudo rm -rf /opt/attendance-app
+```
+
+Do not run the last command if that directory contains data you need.
+
+### 2. Install the software
+
+```bash
+sudo apt update
+sudo apt install -y git curl nginx nodejs npm postgresql ufw
+```
+
+### 3. Download and build the app
+
+```bash
+sudo mkdir -p /opt/attendance-app
+sudo chown "$USER":"$USER" /opt/attendance-app
+git clone https://github.com/Hypnotizexx/AbsenceTrackerSystem.git /opt/attendance-app
+
+cd /opt/attendance-app/AbsenceApp/backend
+npm install
+
+cd /opt/attendance-app/AbsenceApp/frontend
 npm install
 npm run build
 ```
 
-Run the backend as a systemd service on `127.0.0.1:5000`. Nginx should proxy `/login/`, `/students/`, and `/absences` to the backend and serve the React SPA for all other routes.
+### 4. Prepare PostgreSQL and secrets
 
-Follow the complete instructions in [AbsenceApp/Misc/NGINX-DEPLOY.md](AbsenceApp/Misc/NGINX-DEPLOY.md).
-
-## Updating A Deployed Server
+Create a dedicated database user and database. Use your own strong password:
 
 ```bash
-git pull origin main
-cd AbsenceApp/frontend
-npm install
-npm run build
-cd ../backend
-npm install
-sudo systemctl restart attendance-backend
-sudo systemctl restart nginx
+sudo -u postgres createuser --pwprompt absence_app
+sudo -u postgres createdb --owner=absence_app absence_data
 ```
 
-Nginx does not need to be rebuilt. Production frontend source changes require `npm run build` because Nginx serves the generated static files. During development, use `npm start` for automatic browser reloads. CI/CD can automate the production build and deployment after each GitHub push.
-
-## Security
-
-Use HTTPS outside a trusted local network. Keep PostgreSQL credentials and other secrets out of Git. Keep the backend bound to localhost behind Nginx. The development server may listen on the LAN only for trusted local use. Server-side authentication and password hashing should be added before exposing the application to an untrusted network.
-
-## Basic Production Security Steps
-
-These steps assume that you know the fixed IP address of every teacher device. Replace the example addresses with the real addresses. A firewall and Nginx can block the app, but they cannot prevent a student from flooding the whole network connection.
-
-### 1. Allow only teacher IP addresses
-
-Give each teacher device a fixed DHCP reservation first. Then run this on the server:
+Create the secret file:
 
 ```bash
-sudo ufw default deny incoming
-sudo ufw default allow outgoing
-sudo ufw allow from 192.168.10.21 to any port 80 proto tcp
-sudo ufw allow from 192.168.10.22 to any port 80 proto tcp
-sudo ufw allow from 192.168.10.21 to any port 443 proto tcp
-sudo ufw allow from 192.168.10.22 to any port 443 proto tcp
-sudo ufw enable
-sudo ufw status verbose
+sudo install -d -m 750 /etc/attendance-app
+sudo nano /etc/attendance-app/backend.env
 ```
 
-Add one pair of rules for each teacher IP. Do not allow ports `5000` or `5432` from the network.
+Put this in the file:
 
-### 2. Keep Node and PostgreSQL private
+```env
+NODE_ENV=production
+HOST=127.0.0.1
+PORT=5000
+PGHOST=127.0.0.1
+PGPORT=5432
+PGUSER=absence_app
+PGDATABASE=absence_data
+PGPASSWORD=REPLACE_WITH_DATABASE_PASSWORD
+SESSION_SECRET=REPLACE_WITH_A_LONG_RANDOM_SECRET
+```
 
-In `/etc/systemd/system/attendance-backend.service`, use:
+Restrict the file:
+
+```bash
+sudo chown root:YOUR_LINUX_USER /etc/attendance-app/backend.env
+sudo chmod 640 /etc/attendance-app/backend.env
+```
+
+Replace `YOUR_LINUX_USER` with the Linux user that will run the backend. Do not commit this file.
+
+### 5. Create the systemd backend service
+
+Create `/etc/systemd/system/attendance-backend.service`:
 
 ```ini
-Environment=HOST=127.0.0.1
-Environment=PORT=5000
+[Unit]
+Description=Absence App Backend
+After=network.target postgresql.service
+
+[Service]
+Type=simple
+WorkingDirectory=/opt/attendance-app/AbsenceApp/backend
+ExecStart=/usr/bin/npm start
+EnvironmentFile=/etc/attendance-app/backend.env
+User=YOUR_LINUX_USER
+Group=YOUR_LINUX_USER
+Restart=always
+RestartSec=5
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/opt/attendance-app/AbsenceApp/backend
+
+[Install]
+WantedBy=multi-user.target
 ```
 
-After changing it:
+Start it and confirm it is running:
 
 ```bash
 sudo systemctl daemon-reload
-sudo systemctl restart attendance-backend
-sudo ss -ltnp | grep -E ':5000|:5432'
+sudo systemctl enable --now attendance-backend
+sudo systemctl status attendance-backend
 ```
 
-Port `5000` and PostgreSQL port `5432` should show `127.0.0.1`, not `0.0.0.0`.
+### 6. Configure Nginx
 
-### 3. Add basic Nginx protection
-
-First edit `/etc/nginx/nginx.conf`. Add these lines inside the existing `http { ... }` block:
+Edit `/etc/nginx/nginx.conf`. Add these lines inside the existing `http { ... }` block:
 
 ```nginx
 limit_req_zone $binary_remote_addr zone=api_limit:10m rate=10r/s;
@@ -137,66 +186,105 @@ limit_req_zone $binary_remote_addr zone=login_limit:10m rate=5r/m;
 limit_conn_zone $binary_remote_addr zone=connection_limit:10m;
 ```
 
-Next edit `/etc/nginx/sites-available/attendance-app`. Inside the existing `server { ... }` block, add the teacher IP allowlist and connection limit:
+Create `/etc/nginx/sites-available/attendance-app`:
 
 ```nginx
-allow 192.168.10.21;
-allow 192.168.10.22;
-deny all;
-limit_conn connection_limit 20;
+server {
+	listen 80;
+	server_name SERVER_IP_OR_DOMAIN;
+	root /opt/attendance-app/AbsenceApp/frontend/build;
+	index index.html;
+
+	allow TEACHER_IP_1;
+	allow TEACHER_IP_2;
+	deny all;
+	limit_conn connection_limit 20;
+
+	location / {
+		try_files $uri /index.html;
+	}
+
+	location /login/ {
+		limit_req zone=login_limit burst=3 nodelay;
+		proxy_pass http://127.0.0.1:5000;
+		proxy_set_header Host $host;
+		proxy_set_header X-Real-IP $remote_addr;
+		proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+		proxy_set_header X-Forwarded-Proto $scheme;
+	}
+
+	location = /logout {
+		proxy_pass http://127.0.0.1:5000;
+	}
+
+	location /students/ {
+		limit_req zone=api_limit burst=20 nodelay;
+		proxy_pass http://127.0.0.1:5000;
+	}
+
+	location /absences {
+		limit_req zone=api_limit burst=20 nodelay;
+		proxy_pass http://127.0.0.1:5000;
+	}
+}
 ```
 
-Then add the `limit_req` line inside each existing API location. Do not create duplicate locations:
-
-```nginx
-location /login/ {
-	limit_req zone=login_limit burst=3 nodelay;
-	proxy_pass http://127.0.0.1:5000;
-	# Keep the proxy_set_header lines already in this location.
-}
-
-location /students/ {
-	limit_req zone=api_limit burst=20 nodelay;
-	proxy_pass http://127.0.0.1:5000;
-}
-
-location /absences {
-	limit_req zone=api_limit burst=20 nodelay;
-	proxy_pass http://127.0.0.1:5000;
-}
-```
-
-Add the same `allow` lines for every teacher IP. Test and reload Nginx:
+Replace `SERVER_IP_OR_DOMAIN`, `TEACHER_IP_1`, and `TEACHER_IP_2`. Add one `allow` line for every teacher device. Enable the site and remove the default site:
 
 ```bash
+sudo ln -s /etc/nginx/sites-available/attendance-app /etc/nginx/sites-enabled/attendance-app
+sudo rm -f /etc/nginx/sites-enabled/default
 sudo nginx -t
+sudo systemctl enable --now nginx
 sudo systemctl reload nginx
 ```
 
-### 4. Protect the service secrets
+### 7. Configure the firewall
 
-Keep the database password and session secret in `/etc/attendance-app/backend.env`, not in Git:
+Allow web traffic only from the fixed teacher IPs. Add one pair for each teacher:
 
 ```bash
-sudo chown root:YOUR_LINUX_USER /etc/attendance-app/backend.env
-sudo chmod 640 /etc/attendance-app/backend.env
+sudo ufw default deny incoming
+sudo ufw default allow outgoing
+sudo ufw allow from TEACHER_IP_1 to any port 80 proto tcp
+sudo ufw allow from TEACHER_IP_1 to any port 443 proto tcp
+sudo ufw allow from TEACHER_IP_2 to any port 80 proto tcp
+sudo ufw allow from TEACHER_IP_2 to any port 443 proto tcp
+sudo ufw enable
+sudo ufw status verbose
 ```
 
-Replace `YOUR_LINUX_USER` with the user in the systemd unit. Run the backend as that non-root user, not as `root`.
+Never open ports `5000` or `5432` to the LAN. Verify the services are private:
 
-### 5. Protect PostgreSQL
+```bash
+sudo ss -ltnp | grep -E ':5000|:5432'
+```
 
-- Use a separate database user for this app, not the PostgreSQL administrator.
-- Allow PostgreSQL connections only from localhost.
-- Never expose port `5432` to students or the general LAN.
-- Remove the fallback database password from `server.js` before production.
-- Back up the database and test restoring it.
+Both should show `127.0.0.1`, not `0.0.0.0`.
 
-### 6. Check logs
+### 8. Use HTTPS and monitor
+
+For access outside a trusted LAN, configure a TLS certificate and redirect HTTP to HTTPS. Check the services with:
 
 ```bash
 sudo journalctl -u attendance-backend -f
 sudo tail -f /var/log/nginx/access.log
 ```
 
-Look for repeated requests, login failures, and many `429` responses. These settings reduce application-level attacks. A large attack that saturates the network still requires help from the network administrator, hosting provider, VPN, or DDoS protection service.
+These settings reduce application-level attacks and prevent direct access to Node or PostgreSQL. They cannot stop an attacker from saturating the entire network connection; that requires network-level DDoS protection.
+
+## Updating A Deployed Server
+
+```bash
+cd /opt/attendance-app
+git pull origin main
+cd AbsenceApp/frontend
+npm install
+npm run build
+cd ../backend
+npm install
+sudo systemctl restart attendance-backend
+sudo systemctl reload nginx
+```
+
+Nginx does not need to be rebuilt. Frontend changes require `npm run build` because Nginx serves the generated files.

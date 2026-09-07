@@ -69,7 +69,7 @@ CREATE DATABASE my_db_name OWNER my_user;
 \q
 psql -U my_user -d my_db_name -f /path/to/your/backup_file.sql
 
-// Deployment is documented in NGINX-DEPLOY.md.
+// Deployment is documented in the repository README.md.
 
 
 
