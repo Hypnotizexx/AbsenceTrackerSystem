@@ -9,7 +9,7 @@ A teacher-facing absence management application with a React frontend, Express b
 
 ## Secure Production Deployment
 
-These steps deploy the app behind Nginx, with the backend and database private. Teachers do not need fixed device IP addresses. Use a separate teacher Wi-Fi/VLAN or a VPN subnet, and replace `TEACHER_NETWORK_CIDR` with that network, for example `10.8.0.0/24` for a VPN.
+These steps deploy the app behind Nginx on a trusted local network. All teachers can use the server's LAN address. The backend stays private on localhost; only Nginx is reachable over the LAN.
 
 ### 1. Start fresh
 
@@ -56,15 +56,15 @@ npm run build
 
 ### 4. Delete the old application database
 
-This deletes only the old database and role for this application. It permanently deletes their data. Never drop the PostgreSQL system databases `postgres`, `template0`, or `template1`.
+The old database belongs only to this application, so this reset deletes all of its old data and role. Never drop the PostgreSQL system databases `postgres`, `template0`, or `template1`.
 
-Connect to PostgreSQL as the administrator before inspecting or deleting anything:
+Connect to PostgreSQL as the administrator first:
 
 ```bash
 sudo -u postgres psql -d postgres
 ```
 
-Inside the PostgreSQL prompt, verify the connection and list databases and roles:
+Verify the connection and list databases and roles:
 
 ```sql
 \conninfo
@@ -73,22 +73,7 @@ Inside the PostgreSQL prompt, verify the connection and list databases and roles
 \q
 ```
 
-You can also run the same checks without entering the prompt:
-
-```bash
-sudo -u postgres psql -d postgres -c "\l"
-sudo -u postgres psql -d postgres -c "\du"
-```
-
-If the old application used different names, replace `OLD_DATABASE_NAME` and `OLD_DATABASE_USER` below. Do not use these commands for a database used by another application:
-
-```bash
-sudo -u postgres psql -d postgres -c "SELECT pg_terminate_backend(pid) FROM pg_stat_activity WHERE datname = 'OLD_DATABASE_NAME' AND pid <> pg_backend_pid();"
-sudo -u postgres dropdb --if-exists OLD_DATABASE_NAME
-sudo -u postgres dropuser --if-exists OLD_DATABASE_USER
-```
-
-For the deployment in this README, the fresh names are `absence_data` and `absence_app`. If an earlier installation used these names, reset them with:
+Exit PostgreSQL, terminate old connections, then delete the old application database and role:
 
 ```bash
 sudo -u postgres psql -d postgres -c "SELECT pg_terminate_backend(pid) FROM pg_stat_activity WHERE datname = 'absence_data' AND pid <> pg_backend_pid();"
@@ -123,7 +108,7 @@ Use these exact connection values in both applications:
 | Database host | `127.0.0.1` on the server | `DB_HOST=127.0.0.1` if it runs on the server |
 | Database port | `5432` | `5432` |
 
-The React frontend does not connect to PostgreSQL directly and must never contain these credentials. It calls the Node backend through Nginx. If the `/home/ss/123` app runs on another computer, use the server's private VPN address for `DB_HOST` and configure PostgreSQL access only for that VPN; do not expose PostgreSQL to the general LAN.
+The React frontend does not connect to PostgreSQL directly and must never contain these credentials. It calls the Node backend through Nginx. If the `/home/ss/123` app runs on another computer, use the server's LAN address for `DB_HOST`; PostgreSQL must then be configured to accept connections from the local network.
 
 Create the tables. This schema is compatible with the React/Node app and the `/home/ss/123/Gestionnaire-d-Absences-master` extractor:
 
@@ -164,7 +149,7 @@ SQL
 
 The `classes TEXT[]` column is intentional: the reference Python app sends a list of classes, while the Node backend can read PostgreSQL arrays and authorize teachers correctly. The `motif` values mean `5` maladie, `6` concours français, `7` autre, `8` grève des élèves, and `9` sanction.
 
-The `/home/ss/123/Gestionnaire-d-Absences-master` application reads these same tables directly. For the most secure deployment, run that extractor on the PostgreSQL server or through a private VPN so PostgreSQL can remain bound to localhost. If it runs from another computer, connect that computer to the private VPN and allow only the VPN subnet in `pg_hba.conf` and the firewall. Do not open PostgreSQL to the general LAN.
+The `/home/ss/123/Gestionnaire-d-Absences-master` application reads these same tables directly. Run it on the PostgreSQL server when possible so PostgreSQL can remain bound to localhost. If it runs on another trusted LAN computer, use the server LAN address in `DB_HOST`, allow that LAN in PostgreSQL, and protect the network with the firewall.
 
 Check the result before continuing:
 
@@ -202,7 +187,7 @@ SESSION_SECRET=REPLACE_WITH_A_LONG_RANDOM_SECRET
 DB_NAME: absence_data
 DB_USER: absence_app
 DB_PASS: same database password as PGPASSWORD
-DB_HOST: 127.0.0.1 (or the private VPN address)
+DB_HOST: 127.0.0.1 (or the server LAN address if the app runs on another computer)
 ```
 
 Restrict the file:
@@ -300,14 +285,7 @@ server {
 }
 ```
 
-Replace `SERVER_IP_OR_DOMAIN`. Do not add individual teacher IP addresses because they may change. If Nginx should be reachable only through a teacher VPN or VLAN, add these lines inside `server { ... }`, replacing the subnet:
-
-```nginx
-allow TEACHER_NETWORK_CIDR;
-deny all;
-```
-
-Do not use a general shared student/teacher Wi-Fi subnet here, because it would allow students on that Wi-Fi too. Enable the site and remove the default site:
+Replace `SERVER_IP_OR_DOMAIN`. Nginx will be reachable by all devices on the local network. Enable the site and remove the default site:
 
 ```bash
 sudo ln -s /etc/nginx/sites-available/attendance-app /etc/nginx/sites-enabled/attendance-app
@@ -319,18 +297,18 @@ sudo systemctl reload nginx
 
 ### 8. Configure the firewall
 
-Allow web traffic from the teacher VPN or teacher VLAN. This works with changing teacher device IPs because the network boundary is the subnet, not an individual device:
+Allow web traffic from the local network. Teacher device IP addresses do not need to be fixed:
 
 ```bash
 sudo ufw default deny incoming
 sudo ufw default allow outgoing
-sudo ufw allow from TEACHER_NETWORK_CIDR to any port 80 proto tcp
-sudo ufw allow from TEACHER_NETWORK_CIDR to any port 443 proto tcp
+sudo ufw allow 80/tcp
+sudo ufw allow 443/tcp
 sudo ufw enable
 sudo ufw status verbose
 ```
 
-Replace `TEACHER_NETWORK_CIDR` with the teacher VPN/VLAN subnet. If teachers and students use the same Wi-Fi subnet, these rules cannot distinguish them; use a teacher VLAN, VPN, or separate access point first. Never open ports `5000` or `5432` to the LAN. Verify the services are private:
+This allows every device on the local network to reach Nginx. Never open port `5000` to the LAN. Keep PostgreSQL on localhost if `/home/ss/123` runs on the server. If that app runs on another computer, PostgreSQL port `5432` must be allowed for the local network and the database host must be protected by the network firewall. Verify the services:
 
 ```bash
 sudo ss -ltnp | grep -E ':5000|:5432'
