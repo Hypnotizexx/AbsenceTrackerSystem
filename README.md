@@ -7,13 +7,13 @@ A teacher-facing absence management application with a React frontend, Express b
 - `AbsenceApp/frontend` - React application
 - `AbsenceApp/backend` - Express API and PostgreSQL connection
 
-## Secure Production Deployment
+## Secure Production Setup
 
-These steps deploy the app behind Nginx on a trusted local network. All teachers can use the server's LAN address. The backend stays private on localhost; only Nginx is reachable over the LAN.
+Run these steps in order on the production server. All teachers access the app through the server's LAN address.
 
-### 1. Start fresh
+### 1. Remove the previous app deployment
 
-Run these only if this server has an old deployment of this app. Do not remove the Nginx default site or other sites you still use.
+These commands remove the old app service, Nginx site, secrets, and application files.
 
 ```bash
 sudo systemctl disable --now attendance-backend 2>/dev/null || true
@@ -24,13 +24,9 @@ sudo rm -f /etc/nginx/sites-available/attendance-app
 sudo rm -rf /etc/attendance-app
 ```
 
-If the old application is stored at `/opt/attendance-app` and you no longer need it:
-
 ```bash
 sudo rm -rf /opt/attendance-app
 ```
-
-Do not run the last command if that directory contains data you need.
 
 ### 2. Install the software
 
@@ -39,32 +35,15 @@ sudo apt update
 sudo apt install -y git curl nginx nodejs npm postgresql ufw
 ```
 
-### 3. Download and build the app
+### 3. Connect to PostgreSQL and reset the database
 
-```bash
-sudo mkdir -p /opt/attendance-app
-sudo chown "$USER":"$USER" /opt/attendance-app
-git clone https://github.com/Hypnotizexx/AbsenceTrackerSystem.git /opt/attendance-app
-
-cd /opt/attendance-app/AbsenceApp/backend
-npm install
-
-cd /opt/attendance-app/AbsenceApp/frontend
-npm install
-npm run build
-```
-
-### 4. Delete the old application database
-
-The old database belongs only to this application, so this reset deletes all of its old data and role. Never drop the PostgreSQL system databases `postgres`, `template0`, or `template1`.
-
-Connect to PostgreSQL as the administrator first:
+Connect as the PostgreSQL administrator:
 
 ```bash
 sudo -u postgres psql -d postgres
 ```
 
-Verify the connection and list databases and roles:
+Check the connection, then exit:
 
 ```sql
 \conninfo
@@ -73,7 +52,7 @@ Verify the connection and list databases and roles:
 \q
 ```
 
-Exit PostgreSQL, terminate old connections, then delete the old application database and role:
+Delete the old application database and role. This permanently deletes the old app data. Do not delete `postgres`, `template0`, or `template1`:
 
 ```bash
 sudo -u postgres psql -d postgres -c "SELECT pg_terminate_backend(pid) FROM pg_stat_activity WHERE datname = 'absence_data' AND pid <> pg_backend_pid();"
@@ -81,36 +60,32 @@ sudo -u postgres dropdb --if-exists absence_data
 sudo -u postgres dropuser --if-exists absence_app
 ```
 
-### 5. Create the compatible PostgreSQL database
-
-Create a dedicated role and database. Use a strong password when prompted:
+Create the new role and database:
 
 ```bash
 sudo -u postgres createuser --pwprompt absence_app
 sudo -u postgres createdb --owner=absence_app absence_data
 ```
 
-Test the new application credentials before creating the tables. Enter the same password used when creating `absence_app`:
+Use the same password for the Node backend and the `/home/ss/123` app:
+
+```text
+Database: absence_data
+User: absence_app
+Password: the password entered above
+Host: 127.0.0.1 when /home/ss/123 runs on the server
+Port: 5432
+```
+
+Test the new credentials:
 
 ```bash
 psql -h 127.0.0.1 -U absence_app -d absence_data
 ```
 
-Inside the prompt, run `\conninfo`, then exit with `\q`.
+Run `\conninfo`, then exit with `\q`.
 
-Use these exact connection values in both applications:
-
-| Setting | Node backend | `/home/ss/123` app |
-|---|---|---|
-| Database name | `absence_data` | `DB_NAME=absence_data` |
-| Database user | `absence_app` | `DB_USER=absence_app` |
-| Database password | The password entered above | `DB_PASS` with the same password |
-| Database host | `127.0.0.1` on the server | `DB_HOST=127.0.0.1` if it runs on the server |
-| Database port | `5432` | `5432` |
-
-The React frontend does not connect to PostgreSQL directly and must never contain these credentials. It calls the Node backend through Nginx. If the `/home/ss/123` app runs on another computer, use the server's LAN address for `DB_HOST`; PostgreSQL must then be configured to accept connections from the local network.
-
-Create the tables. This schema is compatible with the React/Node app and the `/home/ss/123/Gestionnaire-d-Absences-master` extractor:
+Create the compatible tables:
 
 ```bash
 sudo -u postgres psql -v ON_ERROR_STOP=1 -d absence_data <<'SQL'
@@ -147,20 +122,22 @@ CREATE INDEX eleves_classe_idx ON eleves (classe);
 SQL
 ```
 
-The `classes TEXT[]` column is intentional: the reference Python app sends a list of classes, while the Node backend can read PostgreSQL arrays and authorize teachers correctly. The `motif` values mean `5` maladie, `6` concours français, `7` autre, `8` grève des élèves, and `9` sanction.
-
-The `/home/ss/123/Gestionnaire-d-Absences-master` application reads these same tables directly. Run it on the PostgreSQL server when possible so PostgreSQL can remain bound to localhost. If it runs on another trusted LAN computer, use the server LAN address in `DB_HOST`, allow that LAN in PostgreSQL, and protect the network with the firewall.
-
-Check the result before continuing:
+### 4. Download and build the app
 
 ```bash
-sudo -u postgres psql -d absence_data -c "\dt"
-sudo -u postgres psql -d absence_data -c "\d absences"
-sudo -u postgres psql -d absence_data -c "\d eleves"
-sudo -u postgres psql -d absence_data -c "\d encadrants"
+sudo mkdir -p /opt/attendance-app
+sudo chown "$USER":"$USER" /opt/attendance-app
+git clone https://github.com/Hypnotizexx/AbsenceTrackerSystem.git /opt/attendance-app
+
+cd /opt/attendance-app/AbsenceApp/backend
+npm install
+
+cd /opt/attendance-app/AbsenceApp/frontend
+npm install
+npm run build
 ```
 
-Create the secret file:
+### 5. Configure backend credentials
 
 ```bash
 sudo install -d -m 750 /etc/attendance-app
@@ -177,18 +154,11 @@ PGHOST=127.0.0.1
 PGPORT=5432
 PGUSER=absence_app
 PGDATABASE=absence_data
-PGPASSWORD=REPLACE_WITH_DATABASE_PASSWORD
+PGPASSWORD=REPLACE_WITH_THE_PASSWORD_USED_ABOVE
 SESSION_SECRET=REPLACE_WITH_A_LONG_RANDOM_SECRET
 ```
 
-`PGPASSWORD` must be the same password used for `DB_PASS` in the `/home/ss/123` app. Set the reference app's settings to:
-
-```text
-DB_NAME: absence_data
-DB_USER: absence_app
-DB_PASS: same database password as PGPASSWORD
-DB_HOST: 127.0.0.1 (or the server LAN address if the app runs on another computer)
-```
+Set the `/home/ss/123` app to the same database name, user, password, host, and port. React uses Nginx and never receives PostgreSQL credentials.
 
 Restrict the file:
 
