@@ -87,115 +87,116 @@ Nginx does not need to be rebuilt. Production frontend source changes require `n
 
 Use HTTPS outside a trusted local network. Keep PostgreSQL credentials and other secrets out of Git. Keep the backend bound to localhost behind Nginx. The development server may listen on the LAN only for trusted local use. Server-side authentication and password hashing should be added before exposing the application to an untrusted network.
 
-## Production Hardening Against Network Attacks
+## Basic Production Security Steps
 
-If the app is hosted on a school or home LAN, a student who can inspect network traffic may learn the server IP address. Nginx and systemd improve the service, but they cannot stop someone from flooding the server or the network link. Use the controls below to reduce the attack surface and make application-level flooding less effective.
+These steps assume that you know the fixed IP address of every teacher device. Replace the example addresses with the real addresses. A firewall and Nginx can block the app, but they cannot prevent a student from flooding the whole network connection.
 
-### Restrict who can reach the app
+### 1. Allow only teacher IP addresses
 
-If only teachers or administrators need access, do not allow every device on the LAN. Prefer a separate teacher VLAN or a VPN. Otherwise, allow only the trusted teacher subnet or known teacher IP addresses in the firewall:
+Give each teacher device a fixed DHCP reservation first. Then run this on the server:
 
 ```bash
-# Example: allow HTTP only from the teacher network.
 sudo ufw default deny incoming
 sudo ufw default allow outgoing
-sudo ufw allow from 192.168.10.0/24 to any port 80 proto tcp
-sudo ufw allow from 192.168.10.0/24 to any port 443 proto tcp
+sudo ufw allow from 192.168.10.21 to any port 80 proto tcp
+sudo ufw allow from 192.168.10.22 to any port 80 proto tcp
+sudo ufw allow from 192.168.10.21 to any port 443 proto tcp
+sudo ufw allow from 192.168.10.22 to any port 443 proto tcp
 sudo ufw enable
 sudo ufw status verbose
 ```
 
-Replace the subnet with the real trusted network. Do not open port `5000` or PostgreSQL port `5432` in the firewall. If teachers use a VPN, allow the VPN subnet instead of the general Wi-Fi subnet. Use a stable DHCP reservation or firewall-managed IPs when allowlisting individual teacher devices.
+Add one pair of rules for each teacher IP. Do not allow ports `5000` or `5432` from the network.
 
-### Keep the backend private
+### 2. Keep Node and PostgreSQL private
 
-In the production systemd service, set:
+In `/etc/systemd/system/attendance-backend.service`, use:
 
 ```ini
 Environment=HOST=127.0.0.1
 Environment=PORT=5000
 ```
 
-Verify the backend is not listening on the LAN:
+After changing it:
 
 ```bash
+sudo systemctl daemon-reload
+sudo systemctl restart attendance-backend
 sudo ss -ltnp | grep -E ':5000|:5432'
 ```
 
-Port `5000` should show `127.0.0.1:5000`, not `0.0.0.0:5000`. PostgreSQL should likewise listen only on localhost unless it is intentionally hosted on a separate, protected database server.
+Port `5000` and PostgreSQL port `5432` should show `127.0.0.1`, not `0.0.0.0`.
 
-### Add Nginx request limits
+### 3. Add basic Nginx protection
 
-Inside the Nginx `http { ... }` block, add request and connection limits. The exact values depend on the number of teachers using the app:
+First edit `/etc/nginx/nginx.conf`. Add these lines inside the existing `http { ... }` block:
 
 ```nginx
-limit_req_zone $binary_remote_addr zone=api_per_ip:10m rate=10r/s;
-limit_req_zone $binary_remote_addr zone=login_per_ip:10m rate=5r/m;
-limit_conn_zone $binary_remote_addr zone=connections_per_ip:10m;
+limit_req_zone $binary_remote_addr zone=api_limit:10m rate=10r/s;
+limit_req_zone $binary_remote_addr zone=login_limit:10m rate=5r/m;
+limit_conn_zone $binary_remote_addr zone=connection_limit:10m;
 ```
 
-Inside the app's `server { ... }` block, apply them to the API locations:
+Next edit `/etc/nginx/sites-available/attendance-app`. Inside the existing `server { ... }` block, add the teacher IP allowlist and connection limit:
 
 ```nginx
-limit_conn connections_per_ip 20;
+allow 192.168.10.21;
+allow 192.168.10.22;
+deny all;
+limit_conn connection_limit 20;
+```
 
+Then add the `limit_req` line inside each existing API location. Do not create duplicate locations:
+
+```nginx
 location /login/ {
-	limit_req zone=login_per_ip burst=3 nodelay;
+	limit_req zone=login_limit burst=3 nodelay;
 	proxy_pass http://127.0.0.1:5000;
+	# Keep the proxy_set_header lines already in this location.
 }
 
 location /students/ {
-	limit_req zone=api_per_ip burst=20 nodelay;
+	limit_req zone=api_limit burst=20 nodelay;
 	proxy_pass http://127.0.0.1:5000;
 }
 
 location /absences {
-	limit_req zone=api_per_ip burst=20 nodelay;
+	limit_req zone=api_limit burst=20 nodelay;
 	proxy_pass http://127.0.0.1:5000;
 }
 ```
 
-Keep the existing proxy headers when adding these directives. Test and reload Nginx after changes:
+Add the same `allow` lines for every teacher IP. Test and reload Nginx:
 
 ```bash
 sudo nginx -t
 sudo systemctl reload nginx
 ```
 
-These limits help with application-layer abuse and password guessing. They do not stop a large volumetric attack that saturates the LAN or Internet connection.
+### 4. Protect the service secrets
 
-### Harden systemd
-
-Run the backend as a dedicated non-root user and keep its environment file readable only by that user:
+Keep the database password and session secret in `/etc/attendance-app/backend.env`, not in Git:
 
 ```bash
 sudo chown root:YOUR_LINUX_USER /etc/attendance-app/backend.env
 sudo chmod 640 /etc/attendance-app/backend.env
 ```
 
-Replace `YOUR_LINUX_USER` with the same service user configured in the systemd unit.
+Replace `YOUR_LINUX_USER` with the user in the systemd unit. Run the backend as that non-root user, not as `root`.
 
-The service can also include basic isolation settings:
+### 5. Protect PostgreSQL
 
-```ini
-NoNewPrivileges=true
-PrivateTmp=true
-ProtectSystem=strict
-ProtectHome=true
-ReadWritePaths=/opt/attendance-app/backend
+- Use a separate database user for this app, not the PostgreSQL administrator.
+- Allow PostgreSQL connections only from localhost.
+- Never expose port `5432` to students or the general LAN.
+- Remove the fallback database password from `server.js` before production.
+- Back up the database and test restoring it.
+
+### 6. Check logs
+
+```bash
+sudo journalctl -u attendance-backend -f
+sudo tail -f /var/log/nginx/access.log
 ```
 
-After changing the unit file, run `sudo systemctl daemon-reload` and restart the service. Check logs with `sudo journalctl -u attendance-backend`.
-
-### Protect PostgreSQL
-
-- Use a dedicated database role for the application, not the PostgreSQL superuser.
-- Grant only the tables and operations the backend needs.
-- Keep `PGPASSWORD`, `SESSION_SECRET`, and other secrets in the protected systemd environment file, never in Git.
-- Remove the fallback database password before production deployment and fail startup when required database variables are missing.
-- Keep PostgreSQL bound to localhost or a private database network, and restrict `pg_hba.conf` to the application host.
-- Back up the database regularly and test restoring a backup.
-
-### Monitor and recover
-
-Watch Nginx and backend logs for repeated requests, login failures, `429` responses, database pool exhaustion, and unusual traffic spikes. Keep the operating system, Node.js, Nginx, PostgreSQL, and dependencies updated. For attacks large enough to saturate the network connection, use a separate protected network, VPN gateway, reverse proxy/CDN, or DDoS protection from the network or hosting provider; host-level configuration cannot solve that problem after the link is already saturated.
+Look for repeated requests, login failures, and many `429` responses. These settings reduce application-level attacks. A large attack that saturates the network still requires help from the network administrator, hosting provider, VPN, or DDoS protection service.
