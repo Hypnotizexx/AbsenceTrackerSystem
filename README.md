@@ -7,52 +7,6 @@ A teacher-facing absence management application with a React frontend, Express b
 - `AbsenceApp/frontend` - React application
 - `AbsenceApp/backend` - Express API and PostgreSQL connection
 
-## Quick Start
-
-```bash
-git clone https://github.com/Hypnotizexx/AbsenceTrackerSystem.git
-cd AbsenceTrackerSystem/AbsenceApp
-
-cd backend
-npm install
-npm start
-```
-
-In another terminal:
-
-```bash
-cd AbsenceTrackerSystem/AbsenceApp/frontend
-npm install
-npm start
-```
-
-Open `http://localhost:3000`. The development frontend uses the backend on port `5000`.
-
-To use the development app from another device on the same local network, find the server's LAN address with `hostname -I`, then start both services so they listen on the network:
-
-```bash
-# Terminal 1: backend
-cd AbsenceApp/backend
-HOST=0.0.0.0 npm start
-
-# Terminal 2: frontend
-cd AbsenceApp/frontend
-HOST=0.0.0.0 npm start
-```
-
-Open `http://SERVER_LAN_IP:3000` on the other device. The frontend automatically sends API requests to `http://SERVER_LAN_IP:5000`. Allow ports `3000` and `5000` in the server firewall only on a trusted local network. For the Nginx setup, use `http://SERVER_LAN_IP` and keep port `5000` private.
-
-Set PostgreSQL connection values through environment variables before starting the backend:
-
-```bash
-export PGHOST=localhost
-export PGPORT=5432
-export PGUSER=postgres
-export PGDATABASE=data
-export PGPASSWORD='your-database-password'
-export SESSION_SECRET='a-long-random-local-secret'
-```
-
 ## Secure Production Deployment
 
 These steps deploy the app behind Nginx, with the backend and database private. Teachers do not need fixed device IP addresses. Use a separate teacher Wi-Fi/VLAN or a VPN subnet, and replace `TEACHER_NETWORK_CIDR` with that network, for example `10.8.0.0/24` for a VPN.
@@ -104,7 +58,22 @@ npm run build
 
 This deletes only the old database and role for this application. It permanently deletes their data. Never drop the PostgreSQL system databases `postgres`, `template0`, or `template1`.
 
-First list the databases and roles so you can identify the old application names:
+Connect to PostgreSQL as the administrator before inspecting or deleting anything:
+
+```bash
+sudo -u postgres psql -d postgres
+```
+
+Inside the PostgreSQL prompt, verify the connection and list databases and roles:
+
+```sql
+\conninfo
+\l
+\du
+\q
+```
+
+You can also run the same checks without entering the prompt:
 
 ```bash
 sudo -u postgres psql -d postgres -c "\l"
@@ -135,6 +104,26 @@ Create a dedicated role and database. Use a strong password when prompted:
 sudo -u postgres createuser --pwprompt absence_app
 sudo -u postgres createdb --owner=absence_app absence_data
 ```
+
+Test the new application credentials before creating the tables. Enter the same password used when creating `absence_app`:
+
+```bash
+psql -h 127.0.0.1 -U absence_app -d absence_data
+```
+
+Inside the prompt, run `\conninfo`, then exit with `\q`.
+
+Use these exact connection values in both applications:
+
+| Setting | Node backend | `/home/ss/123` app |
+|---|---|---|
+| Database name | `absence_data` | `DB_NAME=absence_data` |
+| Database user | `absence_app` | `DB_USER=absence_app` |
+| Database password | The password entered above | `DB_PASS` with the same password |
+| Database host | `127.0.0.1` on the server | `DB_HOST=127.0.0.1` if it runs on the server |
+| Database port | `5432` | `5432` |
+
+The React frontend does not connect to PostgreSQL directly and must never contain these credentials. It calls the Node backend through Nginx. If the `/home/ss/123` app runs on another computer, use the server's private VPN address for `DB_HOST` and configure PostgreSQL access only for that VPN; do not expose PostgreSQL to the general LAN.
 
 Create the tables. This schema is compatible with the React/Node app and the `/home/ss/123/Gestionnaire-d-Absences-master` extractor:
 
@@ -205,6 +194,15 @@ PGUSER=absence_app
 PGDATABASE=absence_data
 PGPASSWORD=REPLACE_WITH_DATABASE_PASSWORD
 SESSION_SECRET=REPLACE_WITH_A_LONG_RANDOM_SECRET
+```
+
+`PGPASSWORD` must be the same password used for `DB_PASS` in the `/home/ss/123` app. Set the reference app's settings to:
+
+```text
+DB_NAME: absence_data
+DB_USER: absence_app
+DB_PASS: same database password as PGPASSWORD
+DB_HOST: 127.0.0.1 (or the private VPN address)
 ```
 
 Restrict the file:
